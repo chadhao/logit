@@ -1,4 +1,4 @@
-package github.com/chadhao/logit/config
+package config
 
 var Config = make(map[string]string, 0)
 
