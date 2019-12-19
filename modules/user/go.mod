@@ -1,4 +1,4 @@
-module user
+module github.com/chadhao/logit/modules/user
 
 go 1.13
 
