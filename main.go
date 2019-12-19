@@ -6,7 +6,7 @@ import (
 )
 
 var e = echo.New()
-var c = config.Config
+var c = config.New()
 
 func main() {
 	e.Start("localhost:8080")
