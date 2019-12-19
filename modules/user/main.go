@@ -1,4 +1,4 @@
-package user
+package github.com/chadhao/logit/modules/user
 
 import (
 	"github.com/labstack/echo/v4"
