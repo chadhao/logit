@@ -5,5 +5,5 @@ import (
 )
 
 func loadModules() {
-	user.New().InitModule(e, c)
+	user.InitModule(e, c)
 }
