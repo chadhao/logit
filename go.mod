@@ -1,4 +1,4 @@
-module logit
+module github.com/chadhao/logit
 
 go 1.13
 
