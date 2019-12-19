@@ -10,8 +10,9 @@ func (c Config) loadConfig() {
 
 }
 
-func (c Config) Get(k string) string {
-	return c.config[k]
+func (c Config) Get(k string) (v string, ok bool) {
+	v, ok = c.config[k]
+	return
 }
 
 func New() *Config {

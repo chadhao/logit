@@ -9,5 +9,6 @@ var e = echo.New()
 var c = config.New()
 
 func main() {
+	loadModules()
 	e.Start("localhost:8080")
 }
