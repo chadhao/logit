@@ -1,22 +1,26 @@
 package config
 
-var config = make(map[string]string, 0)
+type (
+	Config interface {
+		LoadConfig()
+		Get(string) (string, bool)
+	}
+	config struct {
+		config map[string]string
+	}
+)
 
-type Config struct {
-	config map[string]string
+func (c *config) LoadConfig() {
+
 }
 
-func (c Config) loadConfig() {
-
-}
-
-func (c Config) Get(k string) (v string, ok bool) {
+func (c *config) Get(k string) (v string, ok bool) {
 	v, ok = c.config[k]
 	return
 }
 
-func New() *Config {
-	return &Config{
-		config: make(map[string]string, 0),
+func New() Config {
+	return &config{
+		config: make(map[string]string),
 	}
 }
