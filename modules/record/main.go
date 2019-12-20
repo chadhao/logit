@@ -5,6 +5,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// InitModule 模块初始化
 func InitModule(e *echo.Echo, c *config.Config) {
 	// load config
 	// add routes
