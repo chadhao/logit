@@ -17,7 +17,7 @@ var (
 )
 
 // InitModule 模块初始化
-func InitModule(e *echo.Echo, c *config.Config) {
+func InitModule(e *echo.Echo, c config.Config) error {
 	// load config
 	// add routes
 	// other initialization code
