@@ -1,3 +1,4 @@
 {
-    "database_url_mongo": "mongodb+srv://logit:logit123@logit-dev-cluster-h9szy.gcp.mongodb.net/test"
+    "mongo_uri": "mongodb+srv://logit:logit123@logit-dev-cluster-h9szy.gcp.mongodb.net/test",
+    "mongo_db": "record"
 }

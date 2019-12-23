@@ -6,16 +6,37 @@ import (
 )
 
 // AddRecord 添加一条新的记录
-func AddRecord(c echo.Context) error {
-	r := new(record.Record)
-	if err := c.Bind(r); err != nil {
-		return err
+func AddRecord(c echo.Context) (err error) {
+	rar := new(record.RequestAddRecord)
+	if err = c.Bind(rar); err != nil {
+		return
 	}
-	return nil
+	if err = rar.Valid(); err != nil {
+		return
+	}
+	// r := rar.ConstructToRecord(userID)
+	// if err = r.Add(); err != nil {
+	// 	return
+	// }
+	return
 }
 
 // DeleteLastRecord 删除上一条记录
-func DeleteLastRecord(c echo.Context) {}
+func DeleteLastRecord(c echo.Context) error {
+	// recordID, err := primitive.ObjectIDFromHex(c.Param("id"))
+	// if err != nil {
+	// 	return err
+	// }
+	// userID :=
+	// r, err := record.GetRecord(recordID)
+	// if err != nil {
+	// 	return err
+	// }
+	// if err := r.Delete(userID); err != nil {
+	// 	return err
+	// }
+	return nil
+}
 
 // GetRecords 获取记录
 func GetRecords(c echo.Context) {}
