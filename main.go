@@ -9,7 +9,15 @@ var e = echo.New()
 var c = config.New()
 
 func main() {
-	c.LoadConfig()
-	loadModules()
-	e.Start("localhost:8080")
+	if err := c.LoadConfig(); err != nil {
+		panic(err.Error())
+	}
+
+	if err := loadModules(); err != nil {
+		panic(err.Error())
+	}
+
+	if err := e.Start("localhost:8080"); err != nil {
+		panic(err.Error())
+	}
 }

@@ -4,6 +4,9 @@ import (
 	"github.com/chadhao/logit/modules/user"
 )
 
-func loadModules() {
-	user.InitModule(e, c)
+func loadModules() error {
+	if err := user.InitModule(e, c); err != nil {
+		return err
+	}
+	return nil
 }
