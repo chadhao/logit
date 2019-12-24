@@ -79,14 +79,9 @@ type Record struct {
 	VehicleID     primitive.ObjectID `bson:"vehicleID" json:"vehicleID" valid:"required"`
 	StartMileAge  *float64           `bson:"startDistance,omitempty" json:"startDistance,omitempty" valid:"-"`
 	EndMileAge    *float64           `bson:"endDistance,omitempty" json:"endDistance,omitempty" valid:"-"`
-	Notes         []Note             `bson:"notes,omitempty" json:"notes,omitempty" valid:"-"`
 	CreatedAt     time.Time          `bson:"createdAt" json:"createdAt" valid:"required"`
 	ClientTime    *time.Time         `bson:"clientTime,omitempty" json:"clientTime,omitempty" valid:"-"`
 	DeletedAt     *time.Time         `bson:"deletedAt,omitempty" json:"deletedAt,omitempty" valid:"-"`
-}
-
-func (r *Record) addNote(note *Note) {
-	r.Notes = append(r.Notes, *note)
 }
 
 // Add 记录添加

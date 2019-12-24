@@ -34,7 +34,7 @@ type RequestAddRecord struct {
 }
 
 // Valid 添加记录请求结构验证
-func (rar *RequestAddRecord) Valid() error {
+func (rar *RequestAddRecord) valid() error {
 	if _, err := valid.ValidateStruct(rar); err != nil {
 		return err
 	}
@@ -55,7 +55,14 @@ func (rar *RequestAddRecord) Valid() error {
 }
 
 // ConstructToRecord 将RequestAddRecord构造为Record
-func (rar *RequestAddRecord) ConstructToRecord(userID primitive.ObjectID) *Record {
+func (rar *RequestAddRecord) ConstructToRecord(userID primitive.ObjectID) (*Record, error) {
+	if err := rar.valid(); err != nil {
+		return nil, err
+	}
+	// vehicleID, err := user.GetVehicleID()
+	// if err != nil {
+	// 	return nil, err
+	// }
 	now := time.Now()
 	r := &Record{
 		ID:            primitive.NewObjectID(),
@@ -66,7 +73,7 @@ func (rar *RequestAddRecord) ConstructToRecord(userID primitive.ObjectID) *Recor
 		StartLocation: rar.StartLocation,
 		EndLocation:   rar.EndLocation,
 		// 获取vehivleID
-		// VehicleID: user.GetVehivleID(),
+		// VehicleID: vehicleID,
 		StartMileAge: rar.StartMileAge,
 		EndMileAge:   rar.EndMileAge,
 		ClientTime:   rar.ClientTime,
@@ -75,5 +82,96 @@ func (rar *RequestAddRecord) ConstructToRecord(userID primitive.ObjectID) *Recor
 	if r.StartTime.IsZero() {
 		r.StartTime = now
 	}
-	return r
+	return r, nil
+}
+
+// RequestAddSystemNote 添加系统笔记
+type RequestAddSystemNote struct {
+	RecordID primitive.ObjectID `json:"recordID" valid:"required"`
+	Comment  string             `json:"comment" valid:"required"`
+	Type     NoteType           `json:"noteType" valid:"required"`
+}
+
+// Valid 添加系统笔记验证
+func (r *RequestAddSystemNote) valid() error {
+	_, err := valid.ValidateStruct(r)
+	return err
+}
+
+// ConstructToSystemNote 将RequestAddSystemNote构造为SystemNote
+func (r *RequestAddSystemNote) ConstructToSystemNote() (*SystemNote, error) {
+	if err := r.valid(); err != nil {
+		return nil, err
+	}
+	sn := &SystemNote{
+		Note{
+			ID:        primitive.NewObjectID(),
+			RecordID:  r.RecordID,
+			Type:      r.Type,
+			Comment:   r.Comment,
+			CreatedAt: time.Now(),
+		},
+	}
+	return sn, nil
+}
+
+// RequestAddOtherWorkNote 添加其它笔记
+type RequestAddOtherWorkNote struct {
+	RecordID primitive.ObjectID `json:"recordID" valid:"required"`
+	Comment  string             `json:"comment" valid:"required"`
+	Type     NoteType           `json:"noteType" valid:"required"`
+}
+
+// Valid 添加其它笔记验证
+func (r *RequestAddOtherWorkNote) valid() error {
+	_, err := valid.ValidateStruct(r)
+	return err
+}
+
+// ConstructToOtherWorkNote 将RequestAddOtherWorkNote构造为OtherWorkNote
+func (r *RequestAddOtherWorkNote) ConstructToOtherWorkNote() (*OtherWorkNote, error) {
+	if err := r.valid(); err != nil {
+		return nil, err
+	}
+	own := &OtherWorkNote{
+		Note{
+			ID:        primitive.NewObjectID(),
+			RecordID:  r.RecordID,
+			Type:      r.Type,
+			Comment:   r.Comment,
+			CreatedAt: time.Now(),
+		},
+	}
+	return own, nil
+}
+
+// RequestAddModificationNote 添加人为修改笔记
+type RequestAddModificationNote struct {
+	RecordID primitive.ObjectID `json:"recordID" valid:"required"`
+	Comment  string             `json:"comment" valid:"required"`
+	Type     NoteType           `json:"noteType" valid:"required"`
+}
+
+// Valid 添加人为修改笔记
+func (r *RequestAddModificationNote) valid() error {
+	_, err := valid.ValidateStruct(r)
+	return err
+}
+
+// ConstructToModificationNote 将RequestAddModificationNote构造为ModificationNote
+func (r *RequestAddModificationNote) ConstructToModificationNote(by primitive.ObjectID) (*ModificationNote, error) {
+	if err := r.valid(); err != nil {
+		return nil, err
+	}
+	mn := &ModificationNote{
+		Note: Note{
+			ID:        primitive.NewObjectID(),
+			RecordID:  r.RecordID,
+			Type:      r.Type,
+			Comment:   r.Comment,
+			CreatedAt: time.Now(),
+		},
+		By: by,
+	}
+	return mn, nil
 }

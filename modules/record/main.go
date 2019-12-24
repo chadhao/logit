@@ -14,6 +14,7 @@ var (
 	// mgoClient        *mongo.Client
 	recordDB         *mongo.Database
 	recordCollection *mongo.Collection
+	noteCollection   *mongo.Collection
 )
 
 // InitModule 模块初始化
@@ -21,6 +22,7 @@ func InitModule(e *echo.Echo, c config.Config) error {
 	// load config
 	// add routes
 	// other initialization code
+	return nil
 }
 
 func initMongoDB(mgoURI, mgoDBName string) error {
@@ -32,5 +34,6 @@ func initMongoDB(mgoURI, mgoDBName string) error {
 	}
 	recordDB = mgoClient.Database(mgoDBName)
 	recordCollection = recordDB.Collection("record")
+	noteCollection = recordDB.Collection("note")
 	return nil
 }
