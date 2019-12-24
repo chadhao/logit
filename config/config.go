@@ -17,6 +17,7 @@ type (
 	Config interface {
 		LoadConfig() error
 		Get(string) (string, bool)
+		LoadModuleConfig(string) map[string]string
 	}
 	config struct {
 		client *clientv3.Client
@@ -63,6 +64,16 @@ func (c *config) LoadConfig() error {
 func (c *config) Get(k string) (v string, ok bool) {
 	v, ok = c.config[k]
 	return
+}
+
+func (c *config) LoadModuleConfig(m string) map[string]string {
+	moduleConfig := make(map[string]string)
+	for k, v := range c.config {
+		if strings.Index(k, m+".") == 0 {
+			moduleConfig[k] = v
+		}
+	}
+	return moduleConfig
 }
 
 func New() Config {
