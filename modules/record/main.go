@@ -1,39 +1,18 @@
 package record
 
 import (
-	"context"
-	"time"
-
 	"github.com/chadhao/logit/config"
+	"github.com/chadhao/logit/modules/record/model"
 	"github.com/labstack/echo/v4"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-)
-
-var (
-	// mgoClient        *mongo.Client
-	recordDB         *mongo.Database
-	recordCollection *mongo.Collection
-	noteCollection   *mongo.Collection
 )
 
 // InitModule 模块初始化
 func InitModule(e *echo.Echo, c config.Config) error {
-	// load config
-	// add routes
-	// other initialization code
-	return nil
-}
-
-func initMongoDB(mgoURI, mgoDBName string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	mgoClient, err := mongo.Connect(ctx, options.Client().ApplyURI(mgoURI))
-	if err != nil {
+	if err := model.New(c.LoadModuleConfig("record.db")); err != nil {
 		return err
 	}
-	recordDB = mgoClient.Database(mgoDBName)
-	recordCollection = recordDB.Collection("record")
-	noteCollection = recordDB.Collection("note")
+
+	// add routes
+	// other initialization code
 	return nil
 }

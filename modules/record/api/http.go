@@ -1,23 +1,24 @@
 package api
 
 import (
-	"github.com/chadhao/logit/modules/record"
+	"github.com/chadhao/logit/modules/record/model"
 	"github.com/labstack/echo/v4"
 )
 
 // AddRecord 添加一条新的记录
 func AddRecord(c echo.Context) error {
-	rar := new(record.RequestAddRecord)
+	rar := new(RequestAddRecord)
 	if err := c.Bind(rar); err != nil {
 		return err
 	}
-	// r, err := rar.ConstructToRecord(userID)
+	// r, err := rar.constructToRecord(userID, vehicleID)
 	// if err != nil {
 	// 	return err
 	// }
 	// if err = r.Add(); err != nil {
-	// 	return
+	// 	return err
 	// }
+	// return c.JSON(http.StatusOK, r)
 	return nil
 }
 
@@ -32,14 +33,27 @@ func DeleteLastRecord(c echo.Context) error {
 	// if err != nil {
 	// 	return err
 	// }
-	// if err := r.Delete(userID); err != nil {
+	// if r.UserID != userID {
+	// 	return
+	// }
+	// if err := r.Delete(); err != nil {
 	// 	return err
 	// }
 	return nil
 }
 
 // GetRecords 获取记录
-func GetRecords(c echo.Context) {}
+func GetRecords(c echo.Context) (err error) {
+	// reqR := new(RequestRecords)
+	// if err := c.Bind(reqR); err != nil {
+	// 	return err
+	// }
+	// records, err := reqR.getRecords(userID)
+	// if err != nil {
+	// 	return err
+	// }
+	return nil
+}
 
 // AddNote 为记录添加笔记
 func AddNote(c echo.Context) (err error) {
@@ -54,33 +68,33 @@ func AddNote(c echo.Context) (err error) {
 	// if r.UserID != userID {
 	// 	return
 	// }
-	var note record.INote
-	noteType := record.NoteType(c.FormValue("noteType"))
+	var note model.INote
+	noteType := model.NoteType(c.FormValue("noteType"))
 	switch noteType {
-	case record.SYSTEMNOTE:
-		request := new(record.RequestAddSystemNote)
+	case model.SYSTEMNOTE:
+		request := new(RequestAddSystemNote)
 		if err = c.Bind(request); err != nil {
 			return err
 		}
-		note, err = request.ConstructToSystemNote()
+		note, err = request.constructToSystemNote()
 		if err != nil {
 			return err
 		}
-	case record.OTHERWORKNOTE:
-		request := new(record.RequestAddOtherWorkNote)
+	case model.OTHERWORKNOTE:
+		request := new(RequestAddOtherWorkNote)
 		if err = c.Bind(request); err != nil {
 			return err
 		}
-		note, err = request.ConstructToOtherWorkNote()
+		note, err = request.constructToOtherWorkNote()
 		if err != nil {
 			return err
 		}
-		// case record.MODIFICATIONNOTE:
-		// 	request := new(record.RequestAddModificationNote)
+		// case model.MODIFICATIONNOTE:
+		// 	request := new(RequestAddModificationNote)
 		// 	if err = c.Bind(request); err != nil {
 		// 		return err
 		// 	}
-		// 	note, err = request.ConstructToModificationNote(userID)
+		// 	note, err = request.constructToModificationNote(userID)
 		// 	if err != nil {
 		// 		return err
 		// 	}

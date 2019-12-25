@@ -6,6 +6,7 @@ go 1.13
 
 require (
 	github.com/DataDog/zstd v1.4.4 // indirect
+	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
 	github.com/coreos/bbolt v1.3.3 // indirect
 	github.com/coreos/etcd v3.3.18+incompatible // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect

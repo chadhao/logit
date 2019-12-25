@@ -1,4 +1,4 @@
-package record
+package model
 
 import (
 	"context"
@@ -98,10 +98,8 @@ func (r *Record) Add() (err error) {
 }
 
 // Delete 记录删除
-func (r *Record) Delete(userID primitive.ObjectID) error {
+func (r *Record) Delete() error {
 	switch {
-	case r.UserID != userID:
-		return errors.New("no authorization")
 	case r.DeletedAt != nil:
 		return errors.New("record has already been deleted")
 	case !r.isLatestRecord():
@@ -164,13 +162,15 @@ func getLastestRecord(userID primitive.ObjectID) (*Record, error) {
 	return lastRec, err
 }
 
-func getRecord(id primitive.ObjectID) (*Record, error) {
+// GetRecord 通过id获取记录
+func GetRecord(id primitive.ObjectID) (*Record, error) {
 	r := new(Record)
 	err := recordCollection.FindOne(context.TODO(), bson.M{"_id": id}).Decode(r)
 	return r, err
 }
 
-func getRecords(userID primitive.ObjectID, from, to time.Time, getDeleted bool) ([]Record, error) {
+// GetRecords 获取用户时间段内的记录
+func GetRecords(userID primitive.ObjectID, from, to time.Time, getDeleted bool) ([]Record, error) {
 	records := []Record{}
 	filter := bson.M{
 		"userID": userID,

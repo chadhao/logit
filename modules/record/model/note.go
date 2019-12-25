@@ -1,16 +1,18 @@
-package record
+package model
 
 import (
 	"context"
 	"time"
 
 	valid "github.com/asaskevich/govalidator"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // INote 笔记接口
 type INote interface {
 	Add() error
+	GetRecordID() primitive.ObjectID
 }
 
 // Note 笔记
@@ -39,6 +41,11 @@ func (sn *SystemNote) Add() error {
 	return nil
 }
 
+// GetRecordID 系统笔记获取RecordID
+func (sn *SystemNote) GetRecordID() primitive.ObjectID {
+	return sn.RecordID
+}
+
 // OtherWorkNote 其它笔记
 type OtherWorkNote struct {
 	Note `bson:",inline"`
@@ -54,6 +61,11 @@ func (own *OtherWorkNote) Add() error {
 		return err
 	}
 	return nil
+}
+
+// GetRecordID 其它笔记获取RecordID
+func (own *OtherWorkNote) GetRecordID() primitive.ObjectID {
+	return own.RecordID
 }
 
 // ModificationNote 人为修改笔记
@@ -74,6 +86,11 @@ func (mn *ModificationNote) Add() error {
 	return nil
 }
 
+// GetRecordID 人为修改笔记获取RecordID
+func (mn *ModificationNote) GetRecordID() primitive.ObjectID {
+	return mn.RecordID
+}
+
 // TripNote 行程笔记
 type TripNote struct {
 	Note                `bson:",inline"`
@@ -84,7 +101,7 @@ type TripNote struct {
 	EndLocation         Location            `bson:"endLocation" json:"endLocation" valid:"required"`
 }
 
-// Add 系统笔记添加到数据库
+// Add 行程笔记添加到数据库
 func (tn *TripNote) Add() error {
 	if _, err := valid.ValidateStruct(tn); err != nil {
 		return err
@@ -94,4 +111,22 @@ func (tn *TripNote) Add() error {
 		return err
 	}
 	return nil
+}
+
+// GetRecordID 行程笔记获取RecordID
+func (tn *TripNote) GetRecordID() primitive.ObjectID {
+	return tn.RecordID
+}
+
+// GetNotes 获取recordIDs相对应的记录
+func GetNotes(recordIDs []primitive.ObjectID) ([]INote, error) {
+	notes := []INote{}
+	cursor, err := noteCollection.Find(context.TODO(), bson.M{"$in": bson.M{"recordID": recordIDs}})
+	if err != nil {
+		return nil, err
+	}
+	if err = cursor.All(context.TODO(), &notes); err != nil {
+		return nil, err
+	}
+	return notes, nil
 }
