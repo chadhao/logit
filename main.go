@@ -9,6 +9,8 @@ var e = echo.New()
 var c = config.New()
 
 func main() {
+	e.HideBanner = true
+
 	if err := c.LoadConfig(); err != nil {
 		panic(err.Error())
 	}
