@@ -118,8 +118,8 @@ func (tn *TripNote) GetRecordID() primitive.ObjectID {
 	return tn.RecordID
 }
 
-// GetNotes 获取recordIDs相对应的记录
-func GetNotes(recordIDs []primitive.ObjectID) ([]INote, error) {
+// GetNotesByRecordIDs 获取recordIDs相对应的记录
+func GetNotesByRecordIDs(recordIDs []primitive.ObjectID) ([]INote, error) {
 	notes := []INote{}
 	cursor, err := noteCollection.Find(context.TODO(), bson.M{"$in": bson.M{"recordID": recordIDs}})
 	if err != nil {

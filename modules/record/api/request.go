@@ -44,7 +44,7 @@ func (reqR *RequestRecords) getRecords(userID primitive.ObjectID) ([]*ResponseRe
 	for _, v := range records {
 		recordIDs = append(recordIDs, v.ID)
 	}
-	notes, err := model.GetNotes(recordIDs)
+	notes, err := model.GetNotesByRecordIDs(recordIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ type RequestRecord struct {
 }
 
 // getRecord 获取记录
-func (reqRecord *RequestRecord) getRecord(id primitive.ObjectID) (*ResponseRecord, error) {
+func (reqRecord *RequestRecord) getRecord() (*ResponseRecord, error) {
 	// 获取记录
 	r, err := model.GetRecord(reqRecord.ID)
 	if err != nil {
@@ -78,7 +78,7 @@ func (reqRecord *RequestRecord) getRecord(id primitive.ObjectID) (*ResponseRecor
 	}
 
 	// 获取记录下的笔记
-	notes, err := model.GetNotes([]primitive.ObjectID{id})
+	notes, err := model.GetNotesByRecordIDs([]primitive.ObjectID{reqRecord.ID})
 	if err != nil {
 		return nil, err
 	}
