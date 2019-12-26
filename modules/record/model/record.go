@@ -11,6 +11,8 @@ import (
 
 	valid "github.com/asaskevich/govalidator"
 
+	locInternal "github.com/chadhao/logit/modules/location/internal"
+	"github.com/chadhao/logit/modules/location/model"
 	locModel "github.com/chadhao/logit/modules/location/model"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -122,6 +124,7 @@ func (r *Record) beforeAdd() error {
 func (r *Record) afterAdd() error {
 	// 1. 获取上一条记录，将上一条记录信息补充完整; endTime, endLocation不为空时候添加
 	// 2. 若此条和上一条的startMileAge都不为空，上一条endMileAge不为空，则为上一条添加endMileAge
+	// 3. 将location信息添加给location服务
 	lastRec, err := getLastestRecord(r.UserID)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -139,6 +142,15 @@ func (r *Record) afterAdd() error {
 	if _, err := recordCollection.UpdateOne(context.Background(), bson.M{"_id": lastRec.ID}, bson.M{"$set": update}); err != nil {
 		return err
 	}
+
+	req := &locInternal.ReqAddDrivingLoc{
+		Location:  model.Location(r.StartLocation),
+		CreatedAt: r.CreatedAt,
+	}
+	if err := locInternal.AddDrivingLoc(r.UserID, req); err != nil {
+		return err
+	}
+
 	return nil
 }
 
