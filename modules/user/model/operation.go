@@ -2,60 +2,100 @@ package model
 
 import (
 	"context"
+	"errors"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func GetUser(t UserQueryType, v interface{}) (*User, error) {
-	user := User{}
-
+func (u *User) Create() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var filter bson.D
-	switch t {
-	case USER_QUERY_BY_ID:
-		filter = bson.D{{"_id", v.(primitive.ObjectID)}}
-	case USER_QUERY_BY_PHONE:
-		filter = bson.D{{"phone", v.(string)}}
-	case USER_QUERY_BY_EMAIL:
-		filter = bson.D{{"email", v.(string)}}
-	case USER_QUERY_BY_LICENCE:
-		if driver, err := GetDriver(DRIVER_QUERY_BY_LICENCE, v); err != nil {
-			return nil, err
-		} else {
-			filter = bson.D{{"driverId", driver.Id}}
-		}
+	if u.Exists() {
+		return errors.New("User exists")
 	}
-	err := db.Collection("user").FindOne(ctx, filter).Decode(&user)
 
+	userBson, err := bson.Marshal(u)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &user, nil
+	if _, err := db.Collection("user").InsertOne(ctx, userBson); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func GetDriver(t DriverQueryType, v interface{}) (*Driver, error) {
-	driver := Driver{}
+func (u *User) Exists() bool {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
+	conditions := primitive.A{}
+	if len(u.Id) > 0 {
+		conditions = append(conditions, bson.D{{"_id", u.Id}})
+	}
+	if len(u.Phone) > 0 {
+		conditions = append(conditions, bson.D{{"phone", u.Phone}})
+	}
+	if len(u.Email) > 0 {
+		conditions = append(conditions, bson.D{{"email", u.Email}})
+	}
+
+	filter := bson.D{{"$or", conditions}}
+
+	if count, _ := db.Collection("user").CountDocuments(ctx, filter); count > 0 {
+		return true
+	}
+
+	return false
+}
+
+func (u *User) Find() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	var filter bson.D
-	switch t {
-	case DRIVER_QUERY_BY_ID:
-		filter = bson.D{{"_id", v.(primitive.ObjectID)}}
-	case DRIVER_QUERY_BY_LICENCE:
-		filter = bson.D{{"licenceNumber", v.(string)}}
-	case DRIVER_QUERY_BY_USER_ID:
-		filter = bson.D{{"userId", v.(primitive.ObjectID)}}
+	if len(u.Id) > 0 {
+		filter = bson.D{{"_id", u.Id}}
+	} else if len(u.Phone) > 0 {
+		filter = bson.D{{"phone", u.Phone}}
+	} else if len(u.Email) > 0 {
+		filter = bson.D{{"email", u.Email}}
+	} else if len(u.DriverId) > 0 {
+		filter = bson.D{{"driverId", u.DriverId}}
+	} else {
+		return errors.New("No query condition found")
 	}
-	err := db.Collection("driver").FindOne(ctx, filter).Decode(&driver)
+
+	err := db.Collection("user").FindOne(ctx, filter).Decode(u)
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &driver, nil
+	return nil
+}
+
+func (d *Driver) Find() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var filter bson.D
+	if len(d.Id) > 0 {
+		filter = bson.D{{"_id", d.Id}}
+	} else if len(d.UserId) > 0 {
+		filter = bson.D{{"userId", d.UserId}}
+	} else if len(d.LicenceNumber) > 0 {
+		filter = bson.D{{"licenceNumber", d.LicenceNumber}}
+	}
+
+	err := db.Collection("driver").FindOne(ctx, filter).Decode(d)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
