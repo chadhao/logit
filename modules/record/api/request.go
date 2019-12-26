@@ -10,13 +10,13 @@ import (
 	"github.com/chadhao/logit/modules/record/model"
 )
 
-// RequestRecords 请求获取记录
-type RequestRecords struct {
+// reqRecords 请求获取记录
+type reqRecords struct {
 	From time.Time `json:"from" valid:"required"`
 	To   time.Time `json:"to" valid:"-"`
 }
 
-func (reqR *RequestRecords) valid() error {
+func (reqR *reqRecords) valid() error {
 	if _, err := valid.ValidateStruct(reqR); err != nil {
 		return err
 	}
@@ -30,7 +30,7 @@ func (reqR *RequestRecords) valid() error {
 }
 
 // getRecords 获取指定时间范围内的记录
-func (reqR *RequestRecords) getRecords(userID primitive.ObjectID) ([]*ResponseRecord, error) {
+func (reqR *reqRecords) getRecords(userID primitive.ObjectID) ([]*respRecord, error) {
 	if err := reqR.valid(); err != nil {
 		return nil, err
 	}
@@ -49,13 +49,13 @@ func (reqR *RequestRecords) getRecords(userID primitive.ObjectID) ([]*ResponseRe
 		return nil, err
 	}
 	// 拼装返回
-	respRecords := []*ResponseRecord{}
+	respRecords := []*respRecord{}
 	notesMap := make(map[primitive.ObjectID][]model.INote)
 	for _, v := range notes {
 		notesMap[v.GetRecordID()] = append(notesMap[v.GetRecordID()], v)
 	}
 	for _, v := range records {
-		respRecords = append(respRecords, &ResponseRecord{
+		respRecords = append(respRecords, &respRecord{
 			Record: v,
 			Notes:  notesMap[v.ID],
 		})
@@ -64,13 +64,13 @@ func (reqR *RequestRecords) getRecords(userID primitive.ObjectID) ([]*ResponseRe
 	return respRecords, nil
 }
 
-// RequestRecord 请求获取记录
-type RequestRecord struct {
+// reqRecord 请求获取记录
+type reqRecord struct {
 	ID primitive.ObjectID `json:"id" valid:"required"`
 }
 
 // getRecord 获取记录
-func (reqRecord *RequestRecord) getRecord() (*ResponseRecord, error) {
+func (reqRecord *reqRecord) getRecord() (*respRecord, error) {
 	// 获取记录
 	r, err := model.GetRecord(reqRecord.ID)
 	if err != nil {
@@ -82,7 +82,7 @@ func (reqRecord *RequestRecord) getRecord() (*ResponseRecord, error) {
 	if err != nil {
 		return nil, err
 	}
-	respRecord := &ResponseRecord{
+	respRecord := &respRecord{
 		Record: *r,
 		Notes:  notes,
 	}
@@ -90,8 +90,8 @@ func (reqRecord *RequestRecord) getRecord() (*ResponseRecord, error) {
 	return respRecord, nil
 }
 
-// RequestAddRecord 添加记录请求结构
-type RequestAddRecord struct {
+// reqAddRecord 添加记录请求结构
+type reqAddRecord struct {
 	Type          model.Type     `json:"type" valid:"required"`
 	StartTime     time.Time      `json:"startTime,omitempty" valid:"-"`
 	EndTime       time.Time      `json:"endTime,omitempty" valid:"-"`
@@ -103,7 +103,7 @@ type RequestAddRecord struct {
 }
 
 // Valid 添加记录请求结构验证
-func (reqAddR *RequestAddRecord) valid() error {
+func (reqAddR *reqAddRecord) valid() error {
 	if _, err := valid.ValidateStruct(reqAddR); err != nil {
 		return err
 	}
@@ -123,8 +123,8 @@ func (reqAddR *RequestAddRecord) valid() error {
 	return nil
 }
 
-// constructToRecord 将RequestAddRecord构造为Record
-func (reqAddR *RequestAddRecord) constructToRecord(userID, vehicleID primitive.ObjectID) (*model.Record, error) {
+// constructToRecord 将reqAddRecord构造为Record
+func (reqAddR *reqAddRecord) constructToRecord(userID, vehicleID primitive.ObjectID) (*model.Record, error) {
 	if err := reqAddR.valid(); err != nil {
 		return nil, err
 	}
@@ -149,21 +149,21 @@ func (reqAddR *RequestAddRecord) constructToRecord(userID, vehicleID primitive.O
 	return r, nil
 }
 
-// RequestAddSystemNote 添加系统笔记
-type RequestAddSystemNote struct {
+// reqAddSystemNote 添加系统笔记
+type reqAddSystemNote struct {
 	RecordID primitive.ObjectID `json:"recordID" valid:"required"`
 	Comment  string             `json:"comment" valid:"required"`
 	Type     model.NoteType     `json:"noteType" valid:"required"`
 }
 
 // Valid 添加系统笔记验证
-func (r *RequestAddSystemNote) valid() error {
+func (r *reqAddSystemNote) valid() error {
 	_, err := valid.ValidateStruct(r)
 	return err
 }
 
-// constructToSystemNote 将RequestAddSystemNote构造为SystemNote
-func (r *RequestAddSystemNote) constructToSystemNote() (*model.SystemNote, error) {
+// constructToSystemNote 将reqAddSystemNote构造为SystemNote
+func (r *reqAddSystemNote) constructToSystemNote() (*model.SystemNote, error) {
 	if err := r.valid(); err != nil {
 		return nil, err
 	}
@@ -179,21 +179,21 @@ func (r *RequestAddSystemNote) constructToSystemNote() (*model.SystemNote, error
 	return sn, nil
 }
 
-// RequestAddOtherWorkNote 添加其它笔记
-type RequestAddOtherWorkNote struct {
+// reqAddOtherWorkNote 添加其它笔记
+type reqAddOtherWorkNote struct {
 	RecordID primitive.ObjectID `json:"recordID" valid:"required"`
 	Comment  string             `json:"comment" valid:"required"`
 	Type     model.NoteType     `json:"noteType" valid:"required"`
 }
 
 // Valid 添加其它笔记验证
-func (r *RequestAddOtherWorkNote) valid() error {
+func (r *reqAddOtherWorkNote) valid() error {
 	_, err := valid.ValidateStruct(r)
 	return err
 }
 
-// constructToOtherWorkNote 将RequestAddOtherWorkNote构造为OtherWorkNote
-func (r *RequestAddOtherWorkNote) constructToOtherWorkNote() (*model.OtherWorkNote, error) {
+// constructToOtherWorkNote 将reqAddOtherWorkNote构造为OtherWorkNote
+func (r *reqAddOtherWorkNote) constructToOtherWorkNote() (*model.OtherWorkNote, error) {
 	if err := r.valid(); err != nil {
 		return nil, err
 	}
@@ -209,21 +209,21 @@ func (r *RequestAddOtherWorkNote) constructToOtherWorkNote() (*model.OtherWorkNo
 	return own, nil
 }
 
-// RequestAddModificationNote 添加人为修改笔记
-type RequestAddModificationNote struct {
+// reqAddModificationNote 添加人为修改笔记
+type reqAddModificationNote struct {
 	RecordID primitive.ObjectID `json:"recordID" valid:"required"`
 	Comment  string             `json:"comment" valid:"required"`
 	Type     model.NoteType     `json:"noteType" valid:"required"`
 }
 
 // Valid 添加人为修改笔记
-func (r *RequestAddModificationNote) valid() error {
+func (r *reqAddModificationNote) valid() error {
 	_, err := valid.ValidateStruct(r)
 	return err
 }
 
-// constructToModificationNote 将RequestAddModificationNote构造为ModificationNote
-func (r *RequestAddModificationNote) constructToModificationNote(by primitive.ObjectID) (*model.ModificationNote, error) {
+// constructToModificationNote 将reqAddModificationNote构造为ModificationNote
+func (r *reqAddModificationNote) constructToModificationNote(by primitive.ObjectID) (*model.ModificationNote, error) {
 	if err := r.valid(); err != nil {
 		return nil, err
 	}

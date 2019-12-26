@@ -14,7 +14,7 @@ func AddRecord(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	rar := new(RequestAddRecord)
+	rar := new(reqAddRecord)
 	if err := c.Bind(rar); err != nil {
 		return err
 	}
@@ -42,7 +42,7 @@ func DeleteLastRecord(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	reqR := &RequestRecord{
+	reqR := &reqRecord{
 		ID: recordID,
 	}
 	r, err := reqR.getRecord()
@@ -60,7 +60,7 @@ func DeleteLastRecord(c echo.Context) error {
 
 // GetRecords 获取记录
 func GetRecords(c echo.Context) (err error) {
-	reqR := new(RequestRecords)
+	reqR := new(reqRecords)
 	if err := c.Bind(reqR); err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func AddNote(c echo.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	reqR := &RequestRecord{
+	reqR := &reqRecord{
 		ID: recordID,
 	}
 	r, err := reqR.getRecord()
@@ -99,29 +99,29 @@ func AddNote(c echo.Context) (err error) {
 	noteType := model.NoteType(c.FormValue("noteType"))
 	switch noteType {
 	case model.SYSTEMNOTE:
-		request := new(RequestAddSystemNote)
-		if err = c.Bind(request); err != nil {
+		req := new(reqAddSystemNote)
+		if err = c.Bind(req); err != nil {
 			return err
 		}
-		note, err = request.constructToSystemNote()
+		note, err = req.constructToSystemNote()
 		if err != nil {
 			return err
 		}
 	case model.OTHERWORKNOTE:
-		request := new(RequestAddOtherWorkNote)
-		if err = c.Bind(request); err != nil {
+		req := new(reqAddOtherWorkNote)
+		if err = c.Bind(req); err != nil {
 			return err
 		}
-		note, err = request.constructToOtherWorkNote()
+		note, err = req.constructToOtherWorkNote()
 		if err != nil {
 			return err
 		}
 	case model.MODIFICATIONNOTE:
-		request := new(RequestAddModificationNote)
-		if err = c.Bind(request); err != nil {
+		req := new(reqAddModificationNote)
+		if err = c.Bind(req); err != nil {
 			return err
 		}
-		note, err = request.constructToModificationNote(userID)
+		note, err = req.constructToModificationNote(userID)
 		if err != nil {
 			return err
 		}

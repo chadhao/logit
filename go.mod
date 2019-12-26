@@ -40,5 +40,6 @@ require (
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	google.golang.org/grpc v1.26.0 // indirect
+	googlemaps.github.io/maps v0.0.0-20191224011144-a46d9fca56ac
 	sigs.k8s.io/yaml v1.1.0 // indirect
 )

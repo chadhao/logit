@@ -11,6 +11,7 @@ import (
 
 	valid "github.com/asaskevich/govalidator"
 
+	locModel "github.com/chadhao/logit/modules/location/model"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -62,10 +63,12 @@ func (t HrTime) getHrs() float64 {
 }
 
 // Location 位置信息
-type Location struct {
-	Address string     `bson:"address" json:"address"`
-	Coors   [2]float64 `bson:"coors,omitempty" json:"coors,omitempty"`
-}
+type Location locModel.Location
+
+// type Location struct {
+// 	Address string     `bson:"address" json:"address"`
+// 	Coors   [2]float64 `bson:"coors,omitempty" json:"coors,omitempty"`
+// }
 
 // Record 记录
 type Record struct {
