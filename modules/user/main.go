@@ -16,3 +16,7 @@ func InitModule(e *echo.Echo, c config.Config) error {
 
 	return nil
 }
+
+func ShutdownModule() {
+	model.Close()
+}

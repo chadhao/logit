@@ -42,3 +42,9 @@ func New(c map[string]string) error {
 
 	return nil
 }
+
+func Close() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	mongoClient.Disconnect(ctx)
+	cancel()
+}

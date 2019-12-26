@@ -2,14 +2,21 @@ package main
 
 import (
 	"github.com/chadhao/logit/config"
+	"github.com/chadhao/logit/middleware"
 	"github.com/labstack/echo/v4"
 )
 
-var e = echo.New()
-var c = config.New()
+var (
+	e = echo.New()
+	c = config.New()
+)
 
 func main() {
+	defer shutdownModules()
+
 	e.HideBanner = true
+	middleware.LoadBeforeRouter(e)
+	middleware.LoadAfterRouter(e)
 
 	if err := c.LoadConfig(); err != nil {
 		panic(err.Error())
