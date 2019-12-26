@@ -33,7 +33,7 @@ func (u *User) Exists() bool {
 	defer cancel()
 
 	conditions := primitive.A{}
-	if len(u.Id) > 0 {
+	if len(u.Id) > 0 && !u.Id.IsZero() {
 		conditions = append(conditions, bson.D{{"_id", u.Id}})
 	}
 	if len(u.Phone) > 0 {
@@ -57,13 +57,13 @@ func (u *User) Find() error {
 	defer cancel()
 
 	var filter bson.D
-	if len(u.Id) > 0 {
+	if len(u.Id) > 0 && !u.Id.IsZero() {
 		filter = bson.D{{"_id", u.Id}}
 	} else if len(u.Phone) > 0 {
 		filter = bson.D{{"phone", u.Phone}}
 	} else if len(u.Email) > 0 {
 		filter = bson.D{{"email", u.Email}}
-	} else if len(u.DriverId) > 0 {
+	} else if len(u.DriverId) > 0 && !u.DriverId.IsZero() {
 		filter = bson.D{{"driverId", u.DriverId}}
 	} else {
 		return errors.New("No query condition found")
@@ -83,9 +83,9 @@ func (d *Driver) Find() error {
 	defer cancel()
 
 	var filter bson.D
-	if len(d.Id) > 0 {
+	if len(d.Id) > 0 && !d.Id.IsZero() {
 		filter = bson.D{{"_id", d.Id}}
-	} else if len(d.UserId) > 0 {
+	} else if len(d.UserId) > 0 && !d.UserId.IsZero() {
 		filter = bson.D{{"userId", d.UserId}}
 	} else if len(d.LicenceNumber) > 0 {
 		filter = bson.D{{"licenceNumber", d.LicenceNumber}}

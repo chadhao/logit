@@ -14,6 +14,7 @@ var (
 func main() {
 	defer shutdownModules()
 
+	e.Debug = true
 	e.HideBanner = true
 	middleware.LoadBeforeRouter(e)
 	middleware.LoadAfterRouter(e)
