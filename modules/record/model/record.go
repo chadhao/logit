@@ -70,6 +70,9 @@ type Location struct {
 
 // fillFull 若其中一项不完整，则用另外一项查找并补完
 func (l *Location) fillFull() (err error) {
+	if l.Address != "" && !l.Coors.EmptyCoors() {
+		return
+	}
 	if l.Address == "" && l.Coors.EmptyCoors() {
 		return errors.New("at least one field requried")
 	}
