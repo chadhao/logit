@@ -14,38 +14,74 @@ import (
 type (
 	// Coors represents a location on the Earth.
 	Coors struct {
-		Lat float64 `bson:"lat,omitempty" json:"lat,omitempty" valid:"required"`
-		Lng float64 `bson:"lng,omitempty" json:"lng,omitempty" valid:"required"`
+		Lat float64 `bson:"lat" json:"lat" valid:"required"`
+		Lng float64 `bson:"lng" json:"lng" valid:"required"`
 	}
-	// Location 位置信息
-	Location struct {
-		Address string `bson:"address" json:"address" valid:"required"`
-		Coors   Coors  `bson:"coors,omitempty" json:"coors,omitempty" valid:"required"`
-	}
+
 	// DrivingLoc 司机在行驶过程中的位置信息
 	DrivingLoc struct {
 		ID        primitive.ObjectID `bson:"_id" json:"id" valid:"-"`
 		UserID    primitive.ObjectID `bson:"userID" json:"userID" valid:"required"`
 		CreatedAt time.Time          `bson:"createdAt" json:"createdAt" valid:"required"`
-		Location  `bson:",inline" json:",inline"`
+		Coors     Coors              `bson:"coors" json:"coors" valid:"required"`
 	}
+
+	// Address 位置信息
+	Address string
 )
 
 // EmptyCoors 判断coors是否为空
-func (l *Location) EmptyCoors() bool {
-	return l.Coors.Lat == 0
+func (dLoc *DrivingLoc) emptyCoors() bool {
+	return dLoc.Coors.Lat == 0
 }
 
 // Save 保存司机行驶的位置信息到数据库
 func (dLoc *DrivingLoc) Save() error {
+	if dLoc.emptyCoors() {
+		return errors.New("coors cannot be null")
+	}
 	if dLoc.CreatedAt.IsZero() {
 		dLoc.CreatedAt = time.Now()
 	}
-	if _, err := valid.ValidateStruct((dLoc)); err != nil {
+	if _, err := valid.ValidateStruct(dLoc); err != nil {
 		return err
 	}
 	_, err := drivingLocCol.InsertOne(context.TODO(), dLoc)
 	return err
+}
+
+// GetCoorsFromAddr 通过位置获取坐标信息
+func (addr Address) GetCoorsFromAddr() (coors Coors, err error) {
+	req := &maps.GeocodingRequest{
+		Address: string(addr),
+	}
+	resp, err := mapClient.Geocode(context.TODO(), req)
+	if err != nil {
+		return
+	}
+	if len(resp) == 0 {
+		err = errors.New("can not find any match address")
+		return
+	}
+	coors = Coors{Lat: resp[0].Geometry.Location.Lat, Lng: resp[0].Geometry.Location.Lng}
+	return
+}
+
+// GetAddrFromCoors 通过坐标信息获取位置
+func (coors Coors) GetAddrFromCoors() (addr Address, err error) {
+	req := &maps.GeocodingRequest{
+		LatLng: &maps.LatLng{Lat: coors.Lat, Lng: coors.Lng},
+	}
+	resp, err := mapClient.Geocode(context.TODO(), req)
+	if err != nil {
+		return
+	}
+	if len(resp) == 0 {
+		err = errors.New("can not find any match address")
+		return
+	}
+	addr = Address(resp[0].FormattedAddress)
+	return
 }
 
 // GetDrivingLocs 通过userID和指定时间段返回司机行驶位置信息
@@ -64,23 +100,4 @@ func GetDrivingLocs(userID primitive.ObjectID, from, to time.Time) ([]DrivingLoc
 		return nil, err
 	}
 	return drivingLocs, nil
-}
-
-// GetCoorsFromAddr 通过位置获取坐标信息
-func GetCoorsFromAddr(addr string) (coors Coors, err error) {
-	findPlaceReq := &maps.FindPlaceFromTextRequest{
-		Input:     addr,
-		InputType: maps.FindPlaceFromTextInputTypeTextQuery,
-	}
-	findPlaceResp, err := mapClient.FindPlaceFromText(context.TODO(), findPlaceReq)
-	if err != nil {
-		return
-	}
-	if len(findPlaceResp.Candidates) == 0 {
-		err = errors.New("can not find any match address")
-		return
-	}
-	latlng := findPlaceResp.Candidates[0].Geometry.Location
-	coors = Coors{Lat: latlng.Lat, Lng: latlng.Lng}
-	return
 }

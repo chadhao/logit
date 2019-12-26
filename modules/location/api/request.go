@@ -12,20 +12,15 @@ import (
 
 // reqAddDrivingLoc 添加行驶信息请求结构
 type reqAddDrivingLoc struct {
-	model.Location `json:",inline"`
-	CreatedAt      time.Time `json:"createdAt,omitempty"`
+	model.Coors `json:",inline"`
+	CreatedAt   time.Time `json:"createdAt,omitempty"`
 }
 
 func (reqAdd *reqAddDrivingLoc) constructToDrivingLoc(userID primitive.ObjectID) (*model.DrivingLoc, error) {
 	// 如果location中的coors为空，则需要请求获取
-	if reqAdd.Location.EmptyCoors() {
-		if coors, err := model.GetCoorsFromAddr(reqAdd.Address); err == nil {
-			reqAdd.Coors = coors
-		}
-	}
 	drivingLoc := &model.DrivingLoc{
 		UserID:    userID,
-		Location:  reqAdd.Location,
+		Coors:     reqAdd.Coors,
 		CreatedAt: reqAdd.CreatedAt,
 	}
 	return drivingLoc, nil
