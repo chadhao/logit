@@ -30,14 +30,9 @@ type (
 	Address string
 )
 
-// EmptyCoors 判断coors是否为空
-func (dLoc *DrivingLoc) emptyCoors() bool {
-	return dLoc.Coors.Lat == 0
-}
-
 // Save 保存司机行驶的位置信息到数据库
 func (dLoc *DrivingLoc) Save() error {
-	if dLoc.emptyCoors() {
+	if dLoc.Coors.EmptyCoors() {
 		return errors.New("coors cannot be null")
 	}
 	if dLoc.CreatedAt.IsZero() {
@@ -65,6 +60,11 @@ func (addr Address) GetCoorsFromAddr() (coors Coors, err error) {
 	}
 	coors = Coors{Lat: resp[0].Geometry.Location.Lat, Lng: resp[0].Geometry.Location.Lng}
 	return
+}
+
+// EmptyCoors 判断coors是否为空
+func (coors *Coors) EmptyCoors() bool {
+	return coors.Lat == 0
 }
 
 // GetAddrFromCoors 通过坐标信息获取位置
