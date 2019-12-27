@@ -7,8 +7,14 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// AddDrivingLoc 添加一条行驶信息
-func AddDrivingLoc(c echo.Context) error {
+// LoadRoutes 路由添加
+func LoadRoutes(e *echo.Echo) {
+	e.POST("/location", addDrivingLoc)
+	e.GET("/admin/location/:userID", getDrivingLocs)
+}
+
+// addDrivingLoc 添加一条行驶信息
+func addDrivingLoc(c echo.Context) error {
 	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))
 	if err != nil {
 		return err
@@ -25,12 +31,12 @@ func AddDrivingLoc(c echo.Context) error {
 	if err = drivingLoc.Save(); err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, drivingLoc)
+	return c.JSON(http.StatusCreated, drivingLoc)
 }
 
-// GetDrivingLocs 获取行驶信息
-func GetDrivingLocs(c echo.Context) error {
-	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))
+// getDrivingLocs 获取行驶信息
+func getDrivingLocs(c echo.Context) error {
+	userID, err := primitive.ObjectIDFromHex(c.Param("userID"))
 	if err != nil {
 		return err
 	}

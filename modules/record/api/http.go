@@ -8,8 +8,16 @@ import (
 	"net/http"
 )
 
-// AddRecord 添加一条新的记录
-func AddRecord(c echo.Context) error {
+// LoadRoutes 路由添加
+func LoadRoutes(e *echo.Echo) {
+	e.POST("/record", addRecord)
+	e.DELETE("/record/:id", deleteLastRecord)
+	e.GET("/records", getRecords)
+	e.POST("/record/:id/note", addNote)
+}
+
+// addRecord 添加一条新的记录
+func addRecord(c echo.Context) error {
 	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))
 	if err != nil {
 		return err
@@ -32,8 +40,8 @@ func AddRecord(c echo.Context) error {
 	return c.JSON(http.StatusOK, r)
 }
 
-// DeleteLastRecord 删除上一条记录
-func DeleteLastRecord(c echo.Context) error {
+// deleteLastRecord 删除上一条记录
+func deleteLastRecord(c echo.Context) error {
 	recordID, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		return err
@@ -58,8 +66,8 @@ func DeleteLastRecord(c echo.Context) error {
 	return nil
 }
 
-// GetRecords 获取记录
-func GetRecords(c echo.Context) (err error) {
+// getRecords 获取记录
+func getRecords(c echo.Context) (err error) {
 	reqR := new(reqRecords)
 	if err := c.Bind(reqR); err != nil {
 		return err
@@ -75,8 +83,8 @@ func GetRecords(c echo.Context) (err error) {
 	return c.JSON(http.StatusOK, records)
 }
 
-// AddNote 为记录添加笔记
-func AddNote(c echo.Context) (err error) {
+// addNote 为记录添加笔记
+func addNote(c echo.Context) (err error) {
 	recordID, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		return err
@@ -134,5 +142,5 @@ func AddNote(c echo.Context) (err error) {
 	return nil
 }
 
-// OfflineSyncRecords 离线返回在线状态后记录同步
-func OfflineSyncRecords(c echo.Context) {}
+// offlineSyncRecords 离线返回在线状态后记录同步
+func offlineSyncRecords(c echo.Context) {}

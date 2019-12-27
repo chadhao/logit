@@ -2,6 +2,7 @@ package record
 
 import (
 	"github.com/chadhao/logit/config"
+	"github.com/chadhao/logit/modules/record/api"
 	"github.com/chadhao/logit/modules/record/model"
 	"github.com/labstack/echo/v4"
 )
@@ -13,6 +14,7 @@ func InitModule(e *echo.Echo, c config.Config) error {
 	}
 
 	// add routes
+	api.LoadRoutes(e)
 	// other initialization code
 	return nil
 }
