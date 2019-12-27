@@ -11,8 +11,11 @@ func InitModule(e *echo.Echo, c config.Config) error {
 		return err
 	}
 
-	// add routes
-	// other initialization code
+	loadRoutes(e)
 
 	return nil
+}
+
+func ShutdownModule() {
+	model.Close()
 }
