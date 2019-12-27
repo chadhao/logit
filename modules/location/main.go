@@ -18,3 +18,8 @@ func InitModule(e *echo.Echo, c config.Config) error {
 	// other initialization code
 	return nil
 }
+
+// ShutdownModule 模块结束
+func ShutdownModule() {
+	model.Close()
+}
