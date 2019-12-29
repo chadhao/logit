@@ -3,7 +3,6 @@ package model
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -12,18 +11,19 @@ import (
 )
 
 var (
+	dbConfig      map[string]string
+	googleConfig  map[string]string
 	mgoClient     *mongo.Client
 	db            *mongo.Database
 	drivingLocCol *mongo.Collection
-	config        map[string]string
 	mapClient     *maps.Client
 )
 
 func dbConnect() (err error) {
-	uri := config["location.db.uri"]
-	username := config["location.db.username"]
-	password := config["location.db.password"]
-	database := config["location.db.database"]
+	uri := dbConfig["location.db.uri"]
+	username := dbConfig["location.db.username"]
+	password := dbConfig["location.db.password"]
+	database := dbConfig["location.db.database"]
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -37,16 +37,21 @@ func dbConnect() (err error) {
 	return
 }
 
-// New 创建连接并传入config
-func New(c map[string]string) (err error) {
-	config = c
+// NewDB 创建连接并传入dbConfig
+func NewDB(c map[string]string) (err error) {
+	dbConfig = c
+	return dbConnect()
+}
 
-	if err = dbConnect(); err != nil {
-		return err
-	}
-	log.Println(config["location.gmap.apikey"])
-	mapClient, err = maps.NewClient(maps.WithAPIKey(config["location.db.gmap.apikey"]))
+func mapConnect() (err error) {
+	mapClient, err = maps.NewClient(maps.WithAPIKey(googleConfig["google.gmap.apikey"]))
 	return
+}
+
+// NewMap 创建map连接
+func NewMap(c map[string]string) (err error) {
+	googleConfig = c
+	return mapConnect()
 }
 
 // Close 关闭
