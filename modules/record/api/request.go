@@ -70,20 +70,12 @@ type reqRecord struct {
 }
 
 // getRecord 获取记录
-func (reqRecord *reqRecord) getRecord(withNotes bool) (*respRecord, error) {
+func (reqRecord *reqRecord) getRecord() (*respRecord, error) {
 	// 获取记录
 	r, err := model.GetRecord(reqRecord.ID)
 	if err != nil {
 		return nil, err
 	}
-
-	if !withNotes {
-		return &respRecord{
-			Record: *r,
-			Notes:  nil,
-		}, nil
-	}
-
 	// 获取记录下的笔记
 	notes, err := model.GetNotesByRecordIDs([]primitive.ObjectID{reqRecord.ID})
 	if err != nil {
@@ -95,6 +87,20 @@ func (reqRecord *reqRecord) getRecord(withNotes bool) (*respRecord, error) {
 	}
 	// 拼装返回
 	return respRecord, nil
+}
+
+// deleteRecord 删除记录
+func (reqRecord *reqRecord) deleteRecord(userID primitive.ObjectID) error {
+	// 获取记录
+	r, err := model.GetRecord(reqRecord.ID)
+	if err != nil {
+		return err
+	}
+	if r.UserID != userID {
+		return errors.New("no authorization")
+	}
+
+	return r.Delete()
 }
 
 // reqAddRecord 添加记录请求结构
@@ -163,6 +169,14 @@ func (reqAddR *reqAddRecord) constructToRecord(userID, vehicleID primitive.Objec
 type reqAddNote struct {
 	RecordID primitive.ObjectID `json:"recordID" valid:"required"`
 	Type     model.NoteType     `json:"noteType" valid:"required"`
+}
+
+func (reqAddNote *reqAddNote) isAuthorized(userID primitive.ObjectID) bool {
+	r, err := model.GetRecord(reqAddNote.RecordID)
+	if err != nil {
+		return false
+	}
+	return r.UserID == userID
 }
 
 // reqAddSystemNote 添加系统笔记

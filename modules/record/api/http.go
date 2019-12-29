@@ -55,14 +55,8 @@ func deleteLastestRecord(c echo.Context) error {
 	reqR := &reqRecord{
 		ID: recordID,
 	}
-	r, err := reqR.getRecord(false)
-	if err != nil {
-		return err
-	}
-	if r.UserID != userID {
-		return errors.New("no authorization")
-	}
-	if err := r.Delete(); err != nil {
+
+	if err := reqR.deleteRecord(userID); err != nil {
 		return err
 	}
 	return nil
@@ -94,20 +88,12 @@ func addNote(c echo.Context) (err error) {
 		return err
 	}
 
-	reqR := &reqRecord{
-		ID: reqAddNote.RecordID,
-	}
-
 	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))
 	if err != nil {
 		return err
 	}
 
-	r, err := reqR.getRecord(false)
-	if err != nil {
-		return err
-	}
-	if r.UserID != userID {
+	if !reqAddNote.isAuthorized(userID) {
 		return errors.New("no authorization")
 	}
 
