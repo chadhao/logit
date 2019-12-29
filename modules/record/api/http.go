@@ -5,15 +5,17 @@ import (
 	"github.com/chadhao/logit/modules/record/model"
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"log"
 	"net/http"
+	"time"
 )
 
 // LoadRoutes 路由添加
 func LoadRoutes(e *echo.Echo) {
 	e.POST("/record", addRecord)
-	e.DELETE("/record/:id", deleteLastRecord)
+	e.DELETE("/record/:id", deleteLastestRecord)
 	e.GET("/records", getRecords)
-	e.POST("/record/:id/note", addNote)
+	e.POST("/record/note", addNote)
 }
 
 // addRecord 添加一条新的记录
@@ -40,8 +42,8 @@ func addRecord(c echo.Context) error {
 	return c.JSON(http.StatusOK, r)
 }
 
-// deleteLastRecord 删除上一条记录
-func deleteLastRecord(c echo.Context) error {
+// deleteLastestRecord 删除上一条记录
+func deleteLastestRecord(c echo.Context) error {
 	recordID, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		return err
@@ -53,7 +55,7 @@ func deleteLastRecord(c echo.Context) error {
 	reqR := &reqRecord{
 		ID: recordID,
 	}
-	r, err := reqR.getRecord()
+	r, err := reqR.getRecord(false)
 	if err != nil {
 		return err
 	}
@@ -69,9 +71,10 @@ func deleteLastRecord(c echo.Context) error {
 // getRecords 获取记录
 func getRecords(c echo.Context) (err error) {
 	reqR := new(reqRecords)
-	if err := c.Bind(reqR); err != nil {
-		return err
-	}
+	reqR.From, _ = time.Parse(time.RFC3339, c.QueryParam("from"))
+	reqR.To, _ = time.Parse(time.RFC3339, c.QueryParam("to"))
+	log.Println(reqR.From)
+
 	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))
 	if err != nil {
 		return err
@@ -85,27 +88,31 @@ func getRecords(c echo.Context) (err error) {
 
 // addNote 为记录添加笔记
 func addNote(c echo.Context) (err error) {
-	recordID, err := primitive.ObjectIDFromHex(c.Param("id"))
-	if err != nil {
+
+	reqAddNote := new(reqAddNote)
+	if err = c.Bind(reqAddNote); err != nil {
 		return err
 	}
+
 	reqR := &reqRecord{
-		ID: recordID,
+		ID: reqAddNote.RecordID,
 	}
-	r, err := reqR.getRecord()
-	if err != nil {
-		return err
-	}
+
 	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))
 	if err != nil {
 		return err
 	}
-	if r.UserID != userID {
-		return
+
+	r, err := reqR.getRecord(false)
+	if err != nil {
+		return err
 	}
+	if r.UserID != userID {
+		return errors.New("no authorization")
+	}
+
 	var note model.INote
-	noteType := model.NoteType(c.FormValue("noteType"))
-	switch noteType {
+	switch reqAddNote.Type {
 	case model.SYSTEMNOTE:
 		req := new(reqAddSystemNote)
 		if err = c.Bind(req); err != nil {

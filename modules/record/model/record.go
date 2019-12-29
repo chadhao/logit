@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"go.mongodb.org/mongo-driver/bson"
 
@@ -64,8 +65,8 @@ func (t HrTime) getHrs() float64 {
 
 // Location 位置信息
 type Location struct {
-	Address locModel.Address `bson:"address,omitempty" json:"address,omitempty"`
-	Coors   locModel.Coors   `bson:"coors,omitempty" json:"coors,omitempty"`
+	Address locModel.Address `bson:"address,omitempty" json:"address,omitempty" valid:"-"`
+	Coors   locModel.Coors   `bson:"coors,omitempty" json:"coors,omitempty" valid:"-"`
 }
 
 // fillFull 若其中一项不完整，则用另外一项查找并补完
@@ -90,9 +91,9 @@ type Record struct {
 	UserID        primitive.ObjectID `bson:"userID" json:"userID" valid:"required"`
 	Type          Type               `bson:"type" json:"type" valid:"required"`
 	StartTime     time.Time          `bson:"startTime" json:"startTime" valid:"required"`
-	EndTime       time.Time          `bson:"endTime,omitempty" json:"endTime,omitempty" valid:"-"`
+	EndTime       *time.Time         `bson:"endTime,omitempty" json:"endTime,omitempty" valid:"-"`
 	StartLocation Location           `bson:"startLocation" json:"startLocation" valid:"required"`
-	EndLocation   Location           `bson:"endLocation,omitempty" json:"endLocation,omitempty" valid:"-"`
+	EndLocation   *Location          `bson:"endLocation,omitempty" json:"endLocation,omitempty" valid:"-"`
 	VehicleID     primitive.ObjectID `bson:"vehicleID" json:"vehicleID" valid:"required"`
 	StartMileAge  *float64           `bson:"startDistance,omitempty" json:"startDistance,omitempty" valid:"-"`
 	EndMileAge    *float64           `bson:"endDistance,omitempty" json:"endDistance,omitempty" valid:"-"`
@@ -103,14 +104,21 @@ type Record struct {
 
 // Add 记录添加
 func (r *Record) Add() (err error) {
-	if err = r.beforeAdd(); err != nil {
+
+	lastRec, err := getLastestRecord(r.UserID)
+	if err != nil && err != mongo.ErrNoDocuments {
+		return err
+	}
+
+	if err = r.beforeAdd(lastRec); err != nil {
 		return
 	}
+
 	// 数据库添加记录
 	if _, err = recordCollection.InsertOne(context.TODO(), r); err != nil {
 		return
 	}
-	go r.afterAdd()
+	go r.afterAdd(lastRec)
 	return
 }
 
@@ -123,28 +131,33 @@ func (r *Record) Delete() error {
 		return errors.New("record is not the lastest one")
 	}
 	// 数据库记录添加删除标记
-	if _, err := recordCollection.UpdateOne(context.TODO(), bson.M{"_id": r.ID}, bson.M{"deletedAt": time.Now()}); err != nil {
+	update := bson.M{"$set": bson.M{"deletedAt": time.Now()}}
+	if _, err := recordCollection.UpdateOne(context.TODO(), bson.M{"_id": r.ID}, update); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *Record) beforeAdd() error {
+func (r *Record) beforeAdd(lastRec *Record) error {
+	if lastRec != nil {
+		if lastRec.Type == r.Type {
+			return errors.New("work type conflict with last record")
+		}
+		if lastRec.StartTime.After(r.StartTime) {
+			return errors.New("start time conflict with last record")
+		}
+	}
 	if err := r.StartLocation.fillFull(); err != nil {
 		return err
 	}
 	return r.valid()
 }
 
-func (r *Record) afterAdd() error {
+func (r *Record) afterAdd(lastRec *Record) error {
 	// 1. 获取上一条记录，将上一条记录信息补充完整; endTime, endLocation不为空时候添加
 	// 2. 若此条和上一条的startMileAge都不为空，上一条endMileAge不为空，则为上一条添加endMileAge
-	lastRec, err := getLastestRecord(r.UserID)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil
-		}
-		return err
+	if lastRec == nil {
+		return nil
 	}
 	update := bson.M{
 		"endTime":     r.StartTime,
@@ -179,7 +192,8 @@ func (r *Record) isLatestRecord() bool {
 
 func getLastestRecord(userID primitive.ObjectID) (*Record, error) {
 	lastRec := new(Record)
-	err := recordCollection.FindOne(context.TODO(), bson.M{"userID": userID, "$natural": -1, "deletedAt": nil}).Decode(lastRec)
+	opts := options.FindOne().SetSort(bson.D{{Key: "_id", Value: -1}})
+	err := recordCollection.FindOne(context.TODO(), bson.M{"userID": userID, "deletedAt": nil}, opts).Decode(lastRec)
 	return lastRec, err
 }
 
@@ -194,9 +208,12 @@ func GetRecord(id primitive.ObjectID) (*Record, error) {
 func GetRecords(userID primitive.ObjectID, from, to time.Time, getDeleted bool) ([]Record, error) {
 	records := []Record{}
 	filter := bson.M{
-		"userID": userID,
-		"$gte":   bson.M{"startTime": from},
-		"$lte":   bson.M{"endTime": to},
+		"userID":    userID,
+		"startTime": bson.M{"$gte": from},
+		"$or": []bson.M{
+			bson.M{"endTime": bson.M{"$lte": to}},
+			bson.M{"startTime": bson.M{"$lte": to}, "endTime": nil},
+		},
 	}
 	if !getDeleted {
 		filter["deletedAt"] = nil

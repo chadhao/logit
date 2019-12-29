@@ -70,11 +70,18 @@ type reqRecord struct {
 }
 
 // getRecord 获取记录
-func (reqRecord *reqRecord) getRecord() (*respRecord, error) {
+func (reqRecord *reqRecord) getRecord(withNotes bool) (*respRecord, error) {
 	// 获取记录
 	r, err := model.GetRecord(reqRecord.ID)
 	if err != nil {
 		return nil, err
+	}
+
+	if !withNotes {
+		return &respRecord{
+			Record: *r,
+			Notes:  nil,
+		}, nil
 	}
 
 	// 获取记录下的笔记
@@ -92,14 +99,14 @@ func (reqRecord *reqRecord) getRecord() (*respRecord, error) {
 
 // reqAddRecord 添加记录请求结构
 type reqAddRecord struct {
-	Type          model.Type     `json:"type" valid:"required"`
-	StartTime     time.Time      `json:"startTime,omitempty" valid:"-"`
-	EndTime       time.Time      `json:"endTime,omitempty" valid:"-"`
-	StartLocation model.Location `json:"startLocation" valid:"required"`
-	EndLocation   model.Location `json:"endLocation,omitempty" valid:"-"`
-	StartMileAge  *float64       `json:"startDistance,omitempty" valid:"-"`
-	EndMileAge    *float64       `json:"endDistance,omitempty" valid:"-"`
-	ClientTime    *time.Time     `bson:"clientTime,omitempty" json:"clientTime,omitempty" valid:"-"`
+	Type          model.Type      `json:"type" valid:"required"`
+	StartTime     *time.Time      `json:"startTime,omitempty" valid:"-"`
+	EndTime       *time.Time      `json:"endTime,omitempty" valid:"-"`
+	StartLocation model.Location  `json:"startLocation" valid:"required"`
+	EndLocation   *model.Location `json:"endLocation,omitempty" valid:"-"`
+	StartMileAge  *float64        `json:"startDistance,omitempty" valid:"-"`
+	EndMileAge    *float64        `json:"endDistance,omitempty" valid:"-"`
+	ClientTime    *time.Time      `json:"clientTime,omitempty" valid:"-"`
 }
 
 // Valid 添加记录请求结构验证
@@ -108,14 +115,18 @@ func (reqAddR *reqAddRecord) valid() error {
 		return err
 	}
 	// 1. 时间检验
-	if !reqAddR.StartTime.IsZero() && !reqAddR.EndTime.IsZero() {
-		if reqAddR.StartTime.After(reqAddR.EndTime) {
+	if reqAddR.StartTime != nil && reqAddR.EndTime != nil {
+		if reqAddR.StartTime.After(*reqAddR.EndTime) {
 			return errors.New("startTime should be before endTime")
 		}
 	}
-	if reqAddR.EndTime.After(time.Now()) || reqAddR.StartTime.After(time.Now()) {
-		return errors.New("cannot add future time")
+	if reqAddR.StartTime != nil && reqAddR.StartTime.After(time.Now()) {
+		return errors.New("cannot add future time to startTime")
 	}
+	if reqAddR.EndTime != nil && reqAddR.EndTime.After(time.Now()) {
+		return errors.New("cannot add future time to endTime")
+	}
+
 	// 2. 若公里数不为空时的检验
 	if reqAddR.StartMileAge != nil && reqAddR.EndMileAge != nil && *reqAddR.StartMileAge > *reqAddR.EndMileAge {
 		return errors.New("startMileAge should be less than endMileAge")
@@ -128,12 +139,15 @@ func (reqAddR *reqAddRecord) constructToRecord(userID, vehicleID primitive.Objec
 	if err := reqAddR.valid(); err != nil {
 		return nil, err
 	}
-	now := time.Now()
+	t := time.Now()
+	if reqAddR.StartTime != nil {
+		t = *reqAddR.StartTime
+	}
 	r := &model.Record{
 		ID:            primitive.NewObjectID(),
 		UserID:        userID,
 		Type:          reqAddR.Type,
-		StartTime:     reqAddR.StartTime,
+		StartTime:     t,
 		EndTime:       reqAddR.EndTime,
 		StartLocation: reqAddR.StartLocation,
 		EndLocation:   reqAddR.EndLocation,
@@ -141,19 +155,20 @@ func (reqAddR *reqAddRecord) constructToRecord(userID, vehicleID primitive.Objec
 		StartMileAge:  reqAddR.StartMileAge,
 		EndMileAge:    reqAddR.EndMileAge,
 		ClientTime:    reqAddR.ClientTime,
-		CreatedAt:     now,
-	}
-	if r.StartTime.IsZero() {
-		r.StartTime = now
+		CreatedAt:     t,
 	}
 	return r, nil
 }
 
+type reqAddNote struct {
+	RecordID primitive.ObjectID `json:"recordID" valid:"required"`
+	Type     model.NoteType     `json:"noteType" valid:"required"`
+}
+
 // reqAddSystemNote 添加系统笔记
 type reqAddSystemNote struct {
-	RecordID primitive.ObjectID `json:"recordID" valid:"required"`
-	Comment  string             `json:"comment" valid:"required"`
-	Type     model.NoteType     `json:"noteType" valid:"required"`
+	Comment    string `json:"comment" valid:"required"`
+	reqAddNote `json:",inline"`
 }
 
 // Valid 添加系统笔记验证
@@ -181,9 +196,8 @@ func (r *reqAddSystemNote) constructToSystemNote() (*model.SystemNote, error) {
 
 // reqAddOtherWorkNote 添加其它笔记
 type reqAddOtherWorkNote struct {
-	RecordID primitive.ObjectID `json:"recordID" valid:"required"`
-	Comment  string             `json:"comment" valid:"required"`
-	Type     model.NoteType     `json:"noteType" valid:"required"`
+	Comment    string `json:"comment" valid:"required"`
+	reqAddNote `json:",inline"`
 }
 
 // Valid 添加其它笔记验证
@@ -211,9 +225,8 @@ func (r *reqAddOtherWorkNote) constructToOtherWorkNote() (*model.OtherWorkNote, 
 
 // reqAddModificationNote 添加人为修改笔记
 type reqAddModificationNote struct {
-	RecordID primitive.ObjectID `json:"recordID" valid:"required"`
-	Comment  string             `json:"comment" valid:"required"`
-	Type     model.NoteType     `json:"noteType" valid:"required"`
+	Comment    string `json:"comment" valid:"required"`
+	reqAddNote `json:",inline"`
 }
 
 // Valid 添加人为修改笔记

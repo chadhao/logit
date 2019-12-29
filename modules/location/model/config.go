@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -43,8 +44,8 @@ func New(c map[string]string) (err error) {
 	if err = dbConnect(); err != nil {
 		return err
 	}
-
-	mapClient, err = maps.NewClient(maps.WithAPIKey(config["location.gmap.apikey"]))
+	log.Println(config["location.gmap.apikey"])
+	mapClient, err = maps.NewClient(maps.WithAPIKey(config["location.db.gmap.apikey"]))
 	return
 }
 
