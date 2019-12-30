@@ -12,7 +12,6 @@ import (
 // INote 笔记接口
 type INote interface {
 	Add() error
-	GetRecordID() primitive.ObjectID
 }
 
 // Note 笔记
@@ -41,11 +40,6 @@ func (sn *SystemNote) Add() error {
 	return nil
 }
 
-// GetRecordID 系统笔记获取RecordID
-func (sn *SystemNote) GetRecordID() primitive.ObjectID {
-	return sn.RecordID
-}
-
 // OtherWorkNote 其它笔记
 type OtherWorkNote struct {
 	Note `bson:",inline"`
@@ -61,11 +55,6 @@ func (own *OtherWorkNote) Add() error {
 		return err
 	}
 	return nil
-}
-
-// GetRecordID 其它笔记获取RecordID
-func (own *OtherWorkNote) GetRecordID() primitive.ObjectID {
-	return own.RecordID
 }
 
 // ModificationNote 人为修改笔记
@@ -84,11 +73,6 @@ func (mn *ModificationNote) Add() error {
 		return err
 	}
 	return nil
-}
-
-// GetRecordID 人为修改笔记获取RecordID
-func (mn *ModificationNote) GetRecordID() primitive.ObjectID {
-	return mn.RecordID
 }
 
 // TripNote 行程笔记
@@ -113,14 +97,22 @@ func (tn *TripNote) Add() error {
 	return nil
 }
 
-// GetRecordID 行程笔记获取RecordID
-func (tn *TripNote) GetRecordID() primitive.ObjectID {
-	return tn.RecordID
+type (
+	// DifNote 不同的笔记
+	DifNote bson.M
+	// DifNotes 不同的笔记集合
+	DifNotes []DifNote
+)
+
+func (d DifNote) getRecordID() primitive.ObjectID {
+	return d["recordID"].(primitive.ObjectID)
 }
 
-// GetNotesByRecordIDs 获取recordIDs相对应的记录
-func GetNotesByRecordIDs(recordIDs []primitive.ObjectID) ([]INote, error) {
-	notes := []INote{}
+// GetNotesByRecordIDs 获取recordIDs相对应的记录并以key为recordID,value为所对应Notes的map结构返回
+func GetNotesByRecordIDs(recordIDs []primitive.ObjectID) (map[primitive.ObjectID]DifNotes, error) {
+
+	notes := DifNotes{}
+
 	cursor, err := noteCollection.Find(context.TODO(), bson.M{"recordID": bson.M{"$in": recordIDs}})
 	if err != nil {
 		return nil, err
@@ -128,5 +120,11 @@ func GetNotesByRecordIDs(recordIDs []primitive.ObjectID) ([]INote, error) {
 	if err = cursor.All(context.TODO(), &notes); err != nil {
 		return nil, err
 	}
-	return notes, nil
+
+	notesMap := make(map[primitive.ObjectID]DifNotes)
+	for _, v := range notes {
+		notesMap[v.getRecordID()] = append(notesMap[v.getRecordID()], v)
+	}
+
+	return notesMap, nil
 }

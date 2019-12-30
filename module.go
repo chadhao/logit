@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/chadhao/logit/config"
-	"github.com/chadhao/logit/modules/location"
 	"github.com/chadhao/logit/modules/record"
 	"github.com/labstack/echo/v4"
 )
@@ -14,13 +13,13 @@ var modulesToBeLoaded = []moduleInit{
 	// message.InitModule,
 	// user.InitModule,
 	record.InitModule,
-	location.InitModule,
+	// location.InitModule,
 }
 
 var modulesToBeShutdown = []moduleShutdown{
 	// user.ShutdownModule,
 	record.ShutdownModule,
-	location.ShutdownModule,
+	// location.ShutdownModule,
 }
 
 func loadModules() error {

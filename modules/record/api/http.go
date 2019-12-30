@@ -2,12 +2,12 @@ package api
 
 import (
 	"errors"
+	"net/http"
+	"time"
+
 	"github.com/chadhao/logit/modules/record/model"
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"log"
-	"net/http"
-	"time"
 )
 
 // LoadRoutes 路由添加
@@ -67,7 +67,6 @@ func getRecords(c echo.Context) (err error) {
 	reqR := new(reqRecords)
 	reqR.From, _ = time.Parse(time.RFC3339, c.QueryParam("from"))
 	reqR.To, _ = time.Parse(time.RFC3339, c.QueryParam("to"))
-	log.Println(reqR.From)
 
 	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))
 	if err != nil {
@@ -82,57 +81,39 @@ func getRecords(c echo.Context) (err error) {
 
 // addNote 为记录添加笔记
 func addNote(c echo.Context) (err error) {
-
-	reqAddNote := new(reqAddNote)
-	if err = c.Bind(reqAddNote); err != nil {
-		return err
-	}
-
 	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))
 	if err != nil {
 		return err
 	}
-
-	if !reqAddNote.isAuthorized(userID) {
+	req := new(reqAddNote)
+	if err := c.Bind(req); err != nil {
+		return err
+	}
+	if !req.isUsersRecord(userID) {
 		return errors.New("no authorization")
 	}
 
 	var note model.INote
-	switch reqAddNote.Type {
-	case model.SYSTEMNOTE:
-		req := new(reqAddSystemNote)
-		if err = c.Bind(req); err != nil {
-			return err
-		}
-		note, err = req.constructToSystemNote()
-		if err != nil {
-			return err
-		}
+	switch req.NoteType {
 	case model.OTHERWORKNOTE:
-		req := new(reqAddOtherWorkNote)
-		if err = c.Bind(req); err != nil {
-			return err
-		}
 		note, err = req.constructToOtherWorkNote()
 		if err != nil {
 			return err
 		}
 	case model.MODIFICATIONNOTE:
-		req := new(reqAddModificationNote)
-		if err = c.Bind(req); err != nil {
-			return err
-		}
 		note, err = req.constructToModificationNote(userID)
 		if err != nil {
 			return err
 		}
+	default:
+		return errors.New("no match noteType")
 	}
 
 	if err = note.Add(); err != nil {
 		return err
 	}
 
-	return nil
+	return c.JSON(http.StatusOK, note)
 }
 
 // offlineSyncRecords 离线返回在线状态后记录同步
