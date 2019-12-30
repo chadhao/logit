@@ -44,16 +44,12 @@ func (reqR *reqRecords) getRecords(userID primitive.ObjectID) ([]*respRecord, er
 	for _, v := range records {
 		recordIDs = append(recordIDs, v.ID)
 	}
-	notes, err := model.GetNotesByRecordIDs(recordIDs)
+	notesMap, err := model.GetNotesByRecordIDs(recordIDs)
 	if err != nil {
 		return nil, err
 	}
 	// 拼装返回
 	respRecords := []*respRecord{}
-	notesMap := make(map[primitive.ObjectID][]model.INote)
-	for _, v := range notes {
-		notesMap[v.GetRecordID()] = append(notesMap[v.GetRecordID()], v)
-	}
 	for _, v := range records {
 		respRecords = append(respRecords, &respRecord{
 			Record: v,
@@ -76,46 +72,66 @@ func (reqRecord *reqRecord) getRecord() (*respRecord, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	// 获取记录下的笔记
-	notes, err := model.GetNotesByRecordIDs([]primitive.ObjectID{reqRecord.ID})
+	notesMap, err := model.GetNotesByRecordIDs([]primitive.ObjectID{reqRecord.ID})
 	if err != nil {
 		return nil, err
 	}
 	respRecord := &respRecord{
 		Record: *r,
-		Notes:  notes,
+		Notes:  notesMap[reqRecord.ID],
 	}
 	// 拼装返回
 	return respRecord, nil
 }
 
+// deleteRecord 删除记录
+func (reqRecord *reqRecord) deleteRecord(userID primitive.ObjectID) error {
+	// 获取记录
+	r, err := model.GetRecord(reqRecord.ID)
+	if err != nil {
+		return err
+	}
+	if r.UserID != userID {
+		return errors.New("no authorization")
+	}
+
+	return r.Delete()
+}
+
 // reqAddRecord 添加记录请求结构
 type reqAddRecord struct {
-	Type          model.Type     `json:"type" valid:"required"`
-	StartTime     time.Time      `json:"startTime,omitempty" valid:"-"`
-	EndTime       time.Time      `json:"endTime,omitempty" valid:"-"`
-	StartLocation model.Location `json:"startLocation" valid:"required"`
-	EndLocation   model.Location `json:"endLocation,omitempty" valid:"-"`
-	StartMileAge  *float64       `json:"startDistance,omitempty" valid:"-"`
-	EndMileAge    *float64       `json:"endDistance,omitempty" valid:"-"`
-	ClientTime    *time.Time     `bson:"clientTime,omitempty" json:"clientTime,omitempty" valid:"-"`
+	Type          model.Type      `json:"type" valid:"required"`
+	StartTime     *time.Time      `json:"startTime,omitempty" valid:"rfc3339,optional"`
+	EndTime       *time.Time      `json:"endTime,omitempty" valid:"rfc3339,optional"`
+	StartLocation model.Location  `json:"startLocation" valid:"required"`
+	EndLocation   *model.Location `json:"endLocation,omitempty" valid:"-"`
+	StartMileAge  *float64        `json:"startDistance,omitempty" valid:"-"`
+	EndMileAge    *float64        `json:"endDistance,omitempty" valid:"-"`
+	ClientTime    *time.Time      `json:"clientTime,omitempty" valid:"rfc3339,optional"`
 }
 
 // Valid 添加记录请求结构验证
 func (reqAddR *reqAddRecord) valid() error {
+	if reqAddR.Type != model.WORK && reqAddR.Type != model.REST {
+		return errors.New("no match type")
+	}
 	if _, err := valid.ValidateStruct(reqAddR); err != nil {
 		return err
 	}
 	// 1. 时间检验
-	if !reqAddR.StartTime.IsZero() && !reqAddR.EndTime.IsZero() {
-		if reqAddR.StartTime.After(reqAddR.EndTime) {
+	if reqAddR.StartTime != nil && reqAddR.EndTime != nil {
+		if reqAddR.StartTime.After(*reqAddR.EndTime) {
 			return errors.New("startTime should be before endTime")
 		}
 	}
-	if reqAddR.EndTime.After(time.Now()) || reqAddR.StartTime.After(time.Now()) {
-		return errors.New("cannot add future time")
+	if reqAddR.StartTime != nil && reqAddR.StartTime.After(time.Now()) {
+		return errors.New("cannot add future time to startTime")
 	}
+	if reqAddR.EndTime != nil && reqAddR.EndTime.After(time.Now()) {
+		return errors.New("cannot add future time to endTime")
+	}
+
 	// 2. 若公里数不为空时的检验
 	if reqAddR.StartMileAge != nil && reqAddR.EndMileAge != nil && *reqAddR.StartMileAge > *reqAddR.EndMileAge {
 		return errors.New("startMileAge should be less than endMileAge")
@@ -128,12 +144,15 @@ func (reqAddR *reqAddRecord) constructToRecord(userID, vehicleID primitive.Objec
 	if err := reqAddR.valid(); err != nil {
 		return nil, err
 	}
-	now := time.Now()
+	t := time.Now()
+	if reqAddR.StartTime != nil {
+		t = *reqAddR.StartTime
+	}
 	r := &model.Record{
 		ID:            primitive.NewObjectID(),
 		UserID:        userID,
 		Type:          reqAddR.Type,
-		StartTime:     reqAddR.StartTime,
+		StartTime:     t,
 		EndTime:       reqAddR.EndTime,
 		StartLocation: reqAddR.StartLocation,
 		EndLocation:   reqAddR.EndLocation,
@@ -141,29 +160,43 @@ func (reqAddR *reqAddRecord) constructToRecord(userID, vehicleID primitive.Objec
 		StartMileAge:  reqAddR.StartMileAge,
 		EndMileAge:    reqAddR.EndMileAge,
 		ClientTime:    reqAddR.ClientTime,
-		CreatedAt:     now,
-	}
-	if r.StartTime.IsZero() {
-		r.StartTime = now
+		CreatedAt:     t,
 	}
 	return r, nil
 }
 
-// reqAddSystemNote 添加系统笔记
-type reqAddSystemNote struct {
+// type (
+// 	// reqAddSystemNote 添加系统笔记
+// 	reqAddSystemNote struct {
+// 		Comment  string             `json:"comment" valid:"required"`
+// 		RecordID primitive.ObjectID `json:"recordID" valid:"required"`
+// 	}
+// 	// reqAddOtherWorkNote 添加其它笔记
+// 	reqAddOtherWorkNote struct {
+// 		Comment  string             `json:"comment" valid:"required"`
+// 		RecordID primitive.ObjectID `json:"recordID" valid:"required"`
+// 	}
+// 	// reqAddModificationNote 添加人为修改笔记
+// 	reqAddModificationNote struct {
+// 		Comment  string             `json:"comment" valid:"required"`
+// 		RecordID primitive.ObjectID `json:"recordID" valid:"required"`
+// 	}
+// )
+
+type reqAddNote struct {
+	NoteType model.NoteType     `json:"noteType" valid:"required"`
 	RecordID primitive.ObjectID `json:"recordID" valid:"required"`
-	Comment  string             `json:"comment" valid:"required"`
-	Type     model.NoteType     `json:"noteType" valid:"required"`
+	Comment  string             `json:"comment" valid:"optional"`
 }
 
-// Valid 添加系统笔记验证
-func (r *reqAddSystemNote) valid() error {
+// valid 添加笔记验证
+func (r *reqAddNote) valid() error {
 	_, err := valid.ValidateStruct(r)
 	return err
 }
 
-// constructToSystemNote 将reqAddSystemNote构造为SystemNote
-func (r *reqAddSystemNote) constructToSystemNote() (*model.SystemNote, error) {
+// constructToSystemNote reqAddNote
+func (r *reqAddNote) constructToSystemNote() (*model.SystemNote, error) {
 	if err := r.valid(); err != nil {
 		return nil, err
 	}
@@ -171,7 +204,7 @@ func (r *reqAddSystemNote) constructToSystemNote() (*model.SystemNote, error) {
 		Note: model.Note{
 			ID:        primitive.NewObjectID(),
 			RecordID:  r.RecordID,
-			Type:      r.Type,
+			Type:      r.NoteType,
 			Comment:   r.Comment,
 			CreatedAt: time.Now(),
 		},
@@ -179,21 +212,8 @@ func (r *reqAddSystemNote) constructToSystemNote() (*model.SystemNote, error) {
 	return sn, nil
 }
 
-// reqAddOtherWorkNote 添加其它笔记
-type reqAddOtherWorkNote struct {
-	RecordID primitive.ObjectID `json:"recordID" valid:"required"`
-	Comment  string             `json:"comment" valid:"required"`
-	Type     model.NoteType     `json:"noteType" valid:"required"`
-}
-
-// Valid 添加其它笔记验证
-func (r *reqAddOtherWorkNote) valid() error {
-	_, err := valid.ValidateStruct(r)
-	return err
-}
-
-// constructToOtherWorkNote 将reqAddOtherWorkNote构造为OtherWorkNote
-func (r *reqAddOtherWorkNote) constructToOtherWorkNote() (*model.OtherWorkNote, error) {
+// constructToOtherWorkNote 将reqAddNote构造为OtherWorkNote
+func (r *reqAddNote) constructToOtherWorkNote() (*model.OtherWorkNote, error) {
 	if err := r.valid(); err != nil {
 		return nil, err
 	}
@@ -201,7 +221,7 @@ func (r *reqAddOtherWorkNote) constructToOtherWorkNote() (*model.OtherWorkNote, 
 		Note: model.Note{
 			ID:        primitive.NewObjectID(),
 			RecordID:  r.RecordID,
-			Type:      r.Type,
+			Type:      r.NoteType,
 			Comment:   r.Comment,
 			CreatedAt: time.Now(),
 		},
@@ -209,21 +229,8 @@ func (r *reqAddOtherWorkNote) constructToOtherWorkNote() (*model.OtherWorkNote, 
 	return own, nil
 }
 
-// reqAddModificationNote 添加人为修改笔记
-type reqAddModificationNote struct {
-	RecordID primitive.ObjectID `json:"recordID" valid:"required"`
-	Comment  string             `json:"comment" valid:"required"`
-	Type     model.NoteType     `json:"noteType" valid:"required"`
-}
-
-// Valid 添加人为修改笔记
-func (r *reqAddModificationNote) valid() error {
-	_, err := valid.ValidateStruct(r)
-	return err
-}
-
-// constructToModificationNote 将reqAddModificationNote构造为ModificationNote
-func (r *reqAddModificationNote) constructToModificationNote(by primitive.ObjectID) (*model.ModificationNote, error) {
+// constructToModificationNote 将reqAddNote构造为ModificationNote
+func (r *reqAddNote) constructToModificationNote(by primitive.ObjectID) (*model.ModificationNote, error) {
 	if err := r.valid(); err != nil {
 		return nil, err
 	}
@@ -231,11 +238,19 @@ func (r *reqAddModificationNote) constructToModificationNote(by primitive.Object
 		Note: model.Note{
 			ID:        primitive.NewObjectID(),
 			RecordID:  r.RecordID,
-			Type:      r.Type,
+			Type:      r.NoteType,
 			Comment:   r.Comment,
 			CreatedAt: time.Now(),
 		},
 		By: by,
 	}
 	return mn, nil
+}
+
+func (r *reqAddNote) isUsersRecord(userID primitive.ObjectID) bool {
+	rec, err := model.GetRecord(r.RecordID)
+	if err != nil {
+		return false
+	}
+	return rec.UserID == userID
 }

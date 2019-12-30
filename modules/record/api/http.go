@@ -2,14 +2,24 @@ package api
 
 import (
 	"errors"
+	"net/http"
+	"time"
+
 	"github.com/chadhao/logit/modules/record/model"
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"net/http"
 )
 
-// AddRecord 添加一条新的记录
-func AddRecord(c echo.Context) error {
+// LoadRoutes 路由添加
+func LoadRoutes(e *echo.Echo) {
+	e.POST("/record", addRecord)
+	e.DELETE("/record/:id", deleteLastestRecord)
+	e.GET("/records", getRecords)
+	e.POST("/record/note", addNote)
+}
+
+// addRecord 添加一条新的记录
+func addRecord(c echo.Context) error {
 	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))
 	if err != nil {
 		return err
@@ -32,8 +42,8 @@ func AddRecord(c echo.Context) error {
 	return c.JSON(http.StatusOK, r)
 }
 
-// DeleteLastRecord 删除上一条记录
-func DeleteLastRecord(c echo.Context) error {
+// deleteLastestRecord 删除上一条记录
+func deleteLastestRecord(c echo.Context) error {
 	recordID, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		return err
@@ -45,25 +55,19 @@ func DeleteLastRecord(c echo.Context) error {
 	reqR := &reqRecord{
 		ID: recordID,
 	}
-	r, err := reqR.getRecord()
-	if err != nil {
-		return err
-	}
-	if r.UserID != userID {
-		return errors.New("no authorization")
-	}
-	if err := r.Delete(); err != nil {
+
+	if err := reqR.deleteRecord(userID); err != nil {
 		return err
 	}
 	return nil
 }
 
-// GetRecords 获取记录
-func GetRecords(c echo.Context) (err error) {
+// getRecords 获取记录
+func getRecords(c echo.Context) (err error) {
 	reqR := new(reqRecords)
-	if err := c.Bind(reqR); err != nil {
-		return err
-	}
+	reqR.From, _ = time.Parse(time.RFC3339, c.QueryParam("from"))
+	reqR.To, _ = time.Parse(time.RFC3339, c.QueryParam("to"))
+
 	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))
 	if err != nil {
 		return err
@@ -75,64 +79,42 @@ func GetRecords(c echo.Context) (err error) {
 	return c.JSON(http.StatusOK, records)
 }
 
-// AddNote 为记录添加笔记
-func AddNote(c echo.Context) (err error) {
-	recordID, err := primitive.ObjectIDFromHex(c.Param("id"))
-	if err != nil {
-		return err
-	}
-	reqR := &reqRecord{
-		ID: recordID,
-	}
-	r, err := reqR.getRecord()
-	if err != nil {
-		return err
-	}
+// addNote 为记录添加笔记
+func addNote(c echo.Context) (err error) {
 	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))
 	if err != nil {
 		return err
 	}
-	if r.UserID != userID {
-		return
+	req := new(reqAddNote)
+	if err := c.Bind(req); err != nil {
+		return err
 	}
+	if !req.isUsersRecord(userID) {
+		return errors.New("no authorization")
+	}
+
 	var note model.INote
-	noteType := model.NoteType(c.FormValue("noteType"))
-	switch noteType {
-	case model.SYSTEMNOTE:
-		req := new(reqAddSystemNote)
-		if err = c.Bind(req); err != nil {
-			return err
-		}
-		note, err = req.constructToSystemNote()
-		if err != nil {
-			return err
-		}
+	switch req.NoteType {
 	case model.OTHERWORKNOTE:
-		req := new(reqAddOtherWorkNote)
-		if err = c.Bind(req); err != nil {
-			return err
-		}
 		note, err = req.constructToOtherWorkNote()
 		if err != nil {
 			return err
 		}
 	case model.MODIFICATIONNOTE:
-		req := new(reqAddModificationNote)
-		if err = c.Bind(req); err != nil {
-			return err
-		}
 		note, err = req.constructToModificationNote(userID)
 		if err != nil {
 			return err
 		}
+	default:
+		return errors.New("no match noteType")
 	}
 
 	if err = note.Add(); err != nil {
 		return err
 	}
 
-	return nil
+	return c.JSON(http.StatusOK, note)
 }
 
-// OfflineSyncRecords 离线返回在线状态后记录同步
-func OfflineSyncRecords(c echo.Context) {}
+// offlineSyncRecords 离线返回在线状态后记录同步
+func offlineSyncRecords(c echo.Context) {}
