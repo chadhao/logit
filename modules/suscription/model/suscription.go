@@ -48,6 +48,10 @@ func (s *Suscription) expiredDaysAdd(days int) (err error) {
 	return
 }
 
+func (s *Suscription) isExpired() bool {
+	return s.ExpiredAt.Before(time.Now())
+}
+
 type (
 	// GeneratedFrom 订阅生成
 	GeneratedFrom struct {
