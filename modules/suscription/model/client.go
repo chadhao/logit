@@ -17,6 +17,8 @@ var (
 	config                map[string]string
 )
 
+var loc, _ = time.LoadLocation("Pacific/Auckland")
+
 func connect() (err error) {
 	uri := config["suscription.db.uri"]
 	username := config["suscription.db.username"]
