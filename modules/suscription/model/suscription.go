@@ -10,12 +10,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// Suscriber 生成或取消订阅记录的接口
-type Suscriber interface {
-	Suscribe()
-	Unsuscribe()
-}
-
 // Suscription 用户的订阅状态
 type Suscription struct {
 	DriverID    primitive.ObjectID `bson:"_id" json:"driverID" valid:"required"`
@@ -51,7 +45,7 @@ type Record struct {
 	ID        primitive.ObjectID `bson:"_id" json:"id" valid:"required"`
 	DriverID  primitive.ObjectID `bson:"driverID" json:"driverID" valid:"required"`
 	Charge    int64              `bson:"charge" json:"charge" valid:"required"`
-	Refund    *int64             `bson:"refund,omitempty" json:"refund,omitempty" valid:"-"`
+	Refund    int64              `bson:"refund" json:"refund" valid:"-"`
 	StartDate string             `bson:"startDate" json:"startDate" valid:"required"`
 	EndDate   string             `bson:"endDate" json:"endDate" valid:"required"`
 	CreatedAt time.Time          `bson:"createdAt" json:"createdAt" valid:"required"`
