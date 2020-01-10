@@ -45,7 +45,7 @@ func (c *config) LoadConfig() error {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	resp, err := c.client.Get(ctx, KEY_PREFIX, clientv3.WithPrefix(), clientv3.WithSort(clientv3.SortByKey, clientv3.SortDescend))
 	cancel()
 

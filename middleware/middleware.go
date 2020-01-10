@@ -1,20 +1,38 @@
 package middleware
 
 import (
+	"github.com/chadhao/logit/config"
+	"github.com/chadhao/logit/middleware/jwt"
+	"github.com/chadhao/logit/router"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
-func LoadBeforeRouter(e *echo.Echo) error {
-
+func LoadBeforeRouter(e *echo.Echo, r router.Router) error {
+	e.Pre(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			c.Set("router", r)
+			return next(c)
+		}
+	})
 	return nil
 }
 
-func LoadAfterRouter(e *echo.Echo) error {
+func LoadAfterRouter(e *echo.Echo, c config.Config) error {
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{"*"},
 		AllowHeaders: []string{"*"},
+	}))
+
+	jwtAccessSigningKey, _ := c.Get("system.jwt.access.key")
+	e.Use(jwt.JWTWithConfig(jwt.JWTConfig{
+		Skipper: func(e echo.Context) bool {
+			r := e.Get("router").(router.Router)
+			route, _ := r.Match(e.Request().Method, e.Path())
+			return len(route.Roles) == 0
+		},
+		SigningKey: []byte(jwtAccessSigningKey),
 	}))
 
 	return nil

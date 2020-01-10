@@ -18,8 +18,6 @@ func main() {
 
 	e.Debug = true
 	e.HideBanner = true
-	middleware.LoadBeforeRouter(e)
-	middleware.LoadAfterRouter(e)
 
 	if err := c.LoadConfig(); err != nil {
 		panic(err.Error())
@@ -29,6 +27,8 @@ func main() {
 		panic(err.Error())
 	}
 
+	middleware.LoadBeforeRouter(e, r)
+	middleware.LoadAfterRouter(e, c)
 	r.Register(e)
 
 	if err := e.Start("localhost:8080"); err != nil {
