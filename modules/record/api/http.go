@@ -10,14 +10,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// LoadRoutes 路由添加
-func LoadRoutes(e *echo.Echo) {
-	e.POST("/record", addRecord)
-	e.DELETE("/record/:id", deleteLastestRecord)
-	e.GET("/records", getRecords)
-	e.POST("/record/note", addNote)
-}
-
 // addRecord 添加一条新的记录
 func addRecord(c echo.Context) error {
 	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))
