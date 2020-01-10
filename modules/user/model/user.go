@@ -16,6 +16,8 @@ func (u *User) Create() error {
 		return errors.New("User exists")
 	}
 
+	u.Id = primitive.NewObjectID()
+
 	userBson, err := bson.Marshal(u)
 	if err != nil {
 		return err
@@ -52,6 +54,10 @@ func (u *User) Exists() bool {
 	return false
 }
 
+func (u *User) ValidForRegister() bool {
+	return len(u.Phone) > 0 && len(u.Password) > 0
+}
+
 func (u *User) Find() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -78,23 +84,15 @@ func (u *User) Find() error {
 	return nil
 }
 
-func (d *Driver) Find() error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+func (u *User) Login() error {
+	pass := u.Password
 
-	var filter bson.D
-	if !d.Id.IsZero() {
-		filter = bson.D{{"_id", d.Id}}
-	} else if !d.UserId.IsZero() {
-		filter = bson.D{{"userId", d.UserId}}
-	} else if len(d.LicenceNumber) > 0 {
-		filter = bson.D{{"licenceNumber", d.LicenceNumber}}
+	if err := u.Find(); err != nil {
+		return err
 	}
 
-	err := db.Collection("driver").FindOne(ctx, filter).Decode(d)
-
-	if err != nil {
-		return err
+	if u.Password != pass {
+		return errors.New("Invalid credentials")
 	}
 
 	return nil

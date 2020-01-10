@@ -23,18 +23,14 @@ const (
 
 type (
 	User struct {
-		Id       primitive.ObjectID   `json:"id" bson:"_id"`
-		Phone    string               `json:"phone" bson:"phone"`
-		Email    string               `json:"email" bson:"email"`
-		Password string               `json:"password" bson:"password"`
-		Pin      string               `json:"pin" bson:"pin"`
-		DriverId primitive.ObjectID   `json:"driverId" bson:"driverId"`
-		RoleIds  []primitive.ObjectID `json:"roleIds" bson:"roleIds"`
-	}
-
-	Role struct {
-		Id   primitive.ObjectID `json:"id" bson:"_id"`
-		Name string             `json:"name" bson:"name"`
+		Id              primitive.ObjectID `json:"id,omitempty" bson:"_id"`
+		Phone           string             `json:"phone,omitempty" bson:"phone"`
+		Email           string             `json:"email,omitempty" bson:"email"`
+		Password        string             `json:"password,omitempty" bson:"password"`
+		ConfirmPassword string             `json:"confirmPassword,omitempty" bson:"-"`
+		Pin             string             `json:"pin,omitempty" bson:"pin"`
+		DriverId        primitive.ObjectID `json:"driverId,omitempty" bson:"driverId"`
+		RoleIds         []int              `json:"roleIds,omitempty" bson:"roleIds"`
 	}
 
 	Driver struct {
