@@ -87,7 +87,7 @@ func (l *Location) fillFull() (err error) {
 
 // Record 记录
 type Record struct {
-	ID            primitive.ObjectID `bson:"_id" json:"id" valid:"required"`
+	ID            primitive.ObjectID `bson:"_id" json:"id" valid:"-"`
 	UserID        primitive.ObjectID `bson:"userID" json:"userID" valid:"required"`
 	Type          Type               `bson:"type" json:"type" valid:"required"`
 	StartTime     time.Time          `bson:"startTime" json:"startTime" valid:"required"`
@@ -166,7 +166,7 @@ func (r *Record) afterAdd(lastRec *Record) error {
 	if r.StartMileAge != nil && lastRec.StartMileAge != nil {
 		update["endMileAge"] = r.StartMileAge
 	}
-	if _, err := recordCollection.UpdateOne(context.Background(), bson.M{"_id": lastRec.ID}, bson.M{"$set": update}); err != nil {
+	if _, err := recordCollection.UpdateOne(context.TODO(), bson.M{"_id": lastRec.ID}, bson.M{"$set": update}); err != nil {
 		return err
 	}
 

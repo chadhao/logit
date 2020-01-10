@@ -16,7 +16,7 @@ type INote interface {
 
 // Note 笔记
 type Note struct {
-	ID        primitive.ObjectID `bson:"_id" json:"id" valid:"required"`
+	ID        primitive.ObjectID `bson:"_id" json:"id" valid:"-"`
 	RecordID  primitive.ObjectID `bson:"recordID" json:"recordID" valid:"required"`
 	Type      NoteType           `bson:"noteType" json:"noteType" valid:"required"`
 	Comment   string             `bson:"comment" json:"comment" valid:"-"`

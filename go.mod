@@ -25,7 +25,9 @@ require (
 	github.com/json-iterator/go v1.1.9 // indirect
 	github.com/labstack/echo/v4 v4.1.11
 	github.com/prometheus/client_golang v1.3.0 // indirect
+	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/soheilhy/cmux v0.1.4 // indirect
+	github.com/tidwall/pretty v1.0.0 // indirect
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect
 	github.com/xdg/stringprep v1.0.0 // indirect
