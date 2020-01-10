@@ -13,12 +13,12 @@ func addDrivingLoc(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	reqAdd := new(reqAddDrivingLoc)
-	if err := c.Bind(reqAdd); err != nil {
+	req := new(reqAddDrivingLoc)
+	if err := c.Bind(req); err != nil {
 		return err
 	}
 
-	drivingLoc, err := reqAdd.constructToDrivingLoc(userID)
+	drivingLoc, err := req.constructToDrivingLoc(userID)
 	if err != nil {
 		return err
 	}

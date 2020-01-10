@@ -12,8 +12,8 @@ import (
 
 // reqRecords 请求获取记录
 type reqRecords struct {
-	From time.Time `json:"from" valid:"required"`
-	To   time.Time `json:"to" valid:"-"`
+	From time.Time `json:"from" query:"from" valid:"required"`
+	To   time.Time `json:"to" query:"to" valid:"optional"`
 }
 
 func (reqR *reqRecords) valid() error {
@@ -62,7 +62,7 @@ func (reqR *reqRecords) getRecords(userID primitive.ObjectID) ([]*respRecord, er
 
 // reqRecord 请求获取记录
 type reqRecord struct {
-	ID primitive.ObjectID `json:"id" valid:"required"`
+	ID primitive.ObjectID `json:"id" query:"id" valid:"required"`
 }
 
 // getRecord 获取记录
@@ -102,13 +102,13 @@ func (reqRecord *reqRecord) deleteRecord(userID primitive.ObjectID) error {
 // reqAddRecord 添加记录请求结构
 type reqAddRecord struct {
 	Type          model.Type      `json:"type" valid:"required"`
-	StartTime     *time.Time      `json:"startTime,omitempty" valid:"rfc3339,optional"`
-	EndTime       *time.Time      `json:"endTime,omitempty" valid:"rfc3339,optional"`
+	StartTime     *time.Time      `json:"startTime,omitempty" valid:"optional"`
+	EndTime       *time.Time      `json:"endTime,omitempty" valid:"optional"`
 	StartLocation model.Location  `json:"startLocation" valid:"required"`
 	EndLocation   *model.Location `json:"endLocation,omitempty" valid:"-"`
 	StartMileAge  *float64        `json:"startDistance,omitempty" valid:"-"`
 	EndMileAge    *float64        `json:"endDistance,omitempty" valid:"-"`
-	ClientTime    *time.Time      `json:"clientTime,omitempty" valid:"rfc3339,optional"`
+	ClientTime    *time.Time      `json:"clientTime,omitempty" valid:"optional"`
 }
 
 // Valid 添加记录请求结构验证
@@ -164,24 +164,6 @@ func (reqAddR *reqAddRecord) constructToRecord(userID, vehicleID primitive.Objec
 	}
 	return r, nil
 }
-
-// type (
-// 	// reqAddSystemNote 添加系统笔记
-// 	reqAddSystemNote struct {
-// 		Comment  string             `json:"comment" valid:"required"`
-// 		RecordID primitive.ObjectID `json:"recordID" valid:"required"`
-// 	}
-// 	// reqAddOtherWorkNote 添加其它笔记
-// 	reqAddOtherWorkNote struct {
-// 		Comment  string             `json:"comment" valid:"required"`
-// 		RecordID primitive.ObjectID `json:"recordID" valid:"required"`
-// 	}
-// 	// reqAddModificationNote 添加人为修改笔记
-// 	reqAddModificationNote struct {
-// 		Comment  string             `json:"comment" valid:"required"`
-// 		RecordID primitive.ObjectID `json:"recordID" valid:"required"`
-// 	}
-// )
 
 type reqAddNote struct {
 	NoteType model.NoteType     `json:"noteType" valid:"required"`

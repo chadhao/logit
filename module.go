@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/chadhao/logit/config"
-	"github.com/chadhao/logit/modules/user"
+	"github.com/chadhao/logit/modules/record"
 	"github.com/chadhao/logit/router"
 )
 
@@ -11,16 +11,16 @@ type moduleShutdown func()
 
 var modulesToBeLoaded = []moduleInit{
 	// message.InitModule,
-	user.InitModule,
+	// user.InitModule,
 
-	// record.InitModule,
+	record.InitModule,
 	// location.InitModule,
 	// ABOVE TWO MODULES NEED TO BE REFACTORED FOR THE NEW ROUTER
 }
 
 var modulesToBeShutdown = []moduleShutdown{
-	user.ShutdownModule,
-	// record.ShutdownModule,
+	// user.ShutdownModule,
+	record.ShutdownModule,
 	// location.ShutdownModule,
 }
 

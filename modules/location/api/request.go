@@ -28,8 +28,8 @@ func (reqAdd *reqAddDrivingLoc) constructToDrivingLoc(userID primitive.ObjectID)
 
 // reqDrivingLocs 行驶信息请求结构
 type reqDrivingLocs struct {
-	From time.Time `json:"from" valid:"required"`
-	To   time.Time `json:"to" valid:"-"`
+	From time.Time `json:"from" query:"from" valid:"required"`
+	To   time.Time `json:"to" query:"to" valid:"optional"`
 }
 
 func (req *reqDrivingLocs) valid() error {
