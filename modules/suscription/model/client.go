@@ -15,9 +15,8 @@ var (
 	suscriptionCollection *mongo.Collection
 	recordCollection      *mongo.Collection
 	config                map[string]string
+	loc                   *time.Location
 )
-
-var loc, _ = time.LoadLocation("Pacific/Auckland")
 
 func connect() (err error) {
 	uri := config["suscription.db.uri"]
@@ -39,14 +38,14 @@ func connect() (err error) {
 }
 
 // New 创建数据库连接并传入config
-func New(c map[string]string) error {
+func New(c map[string]string) (err error) {
 	config = c
-
-	if err := connect(); err != nil {
-		return err
+	loc, err = time.LoadLocation(config["suscription.time.location"])
+	if err != nil {
+		return
 	}
-
-	return nil
+	err = connect()
+	return
 }
 
 // Close 关闭
