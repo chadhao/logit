@@ -9,7 +9,7 @@ import (
 
 // InitModule 模块初始化
 func InitModule(r router.Router, c config.Config) error {
-	if err := model.New(c.LoadModuleConfig("record.db")); err != nil {
+	if err := model.New(c.LoadModuleConfig("record")); err != nil {
 		return err
 	}
 

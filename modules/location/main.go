@@ -9,10 +9,7 @@ import (
 
 // InitModule 模块初始化
 func InitModule(r router.Router, c config.Config) error {
-	if err := model.NewDB(c.LoadModuleConfig("location.db")); err != nil {
-		return err
-	}
-	if err := model.NewMap(c.LoadModuleConfig("google.gmap")); err != nil {
+	if err := model.New(c.LoadModuleConfig("location")); err != nil {
 		return err
 	}
 	api.LoadRoutes(r)
