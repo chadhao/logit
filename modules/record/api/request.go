@@ -12,8 +12,9 @@ import (
 
 // reqRecords 请求获取记录
 type reqRecords struct {
-	From time.Time `json:"from" query:"from" valid:"required"`
-	To   time.Time `json:"to" query:"to" valid:"optional"`
+	DriverID primitive.ObjectID `json:"driverID" query:"driverID" valid:"required"`
+	From     time.Time          `json:"from" query:"from" valid:"required"`
+	To       time.Time          `json:"to" query:"to" valid:"optional"`
 }
 
 func (reqR *reqRecords) valid() error {
@@ -30,12 +31,12 @@ func (reqR *reqRecords) valid() error {
 }
 
 // getRecords 获取指定时间范围内的记录
-func (reqR *reqRecords) getRecords(userID primitive.ObjectID) ([]*respRecord, error) {
+func (reqR *reqRecords) getRecords() ([]*respRecord, error) {
 	if err := reqR.valid(); err != nil {
 		return nil, err
 	}
 	// 获取记录
-	records, err := model.GetRecords(userID, reqR.From, reqR.To, false)
+	records, err := model.GetRecords(reqR.DriverID, reqR.From, reqR.To, false)
 	if err != nil {
 		return nil, err
 	}

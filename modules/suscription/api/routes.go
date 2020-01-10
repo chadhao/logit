@@ -13,6 +13,6 @@ func LoadRoutes(r router.Router) {
 		Path:    "/suscription",
 		Method:  http.MethodGet,
 		Handler: getSuscription,
-		Roles:   []int{constant.ROLE_DRIVER},
+		Roles:   []int{constant.ROLE_DRIVER, constant.ROLE_ADMIN},
 	})
 }

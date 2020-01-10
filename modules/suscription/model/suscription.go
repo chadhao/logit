@@ -107,9 +107,9 @@ func (r *Record) MakeRefund(refund int64) (err error) {
 }
 
 // GetSuscription 获取用户的订阅状态
-func GetSuscription(driver primitive.ObjectID) (*Suscription, error) {
+func GetSuscription(driverID primitive.ObjectID) (*Suscription, error) {
 	s := &Suscription{}
-	err := suscriptionCollection.FindOne(context.TODO(), bson.M{"_id": driver}).Decode(s)
+	err := suscriptionCollection.FindOne(context.TODO(), bson.M{"_id": driverID}).Decode(s)
 	return s, err
 }
 
@@ -121,10 +121,10 @@ func GetRecord(id primitive.ObjectID) (*Record, error) {
 }
 
 // GetRecords 获取用户的订阅记录
-func GetRecords(userID primitive.ObjectID) ([]Record, error) {
+func GetRecords(driverID primitive.ObjectID) ([]Record, error) {
 	records := []Record{}
 
-	cursor, err := recordCollection.Find(context.TODO(), bson.M{"userID": userID})
+	cursor, err := recordCollection.Find(context.TODO(), bson.M{"driverID": driverID})
 	if err != nil {
 		return nil, err
 	}

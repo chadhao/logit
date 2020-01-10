@@ -84,11 +84,11 @@ func (coors Coors) GetAddrFromCoors() (addr Address, err error) {
 	return
 }
 
-// GetDrivingLocs 通过userID和指定时间段返回司机行驶位置信息
-func GetDrivingLocs(userID primitive.ObjectID, from, to time.Time) ([]DrivingLoc, error) {
+// GetDrivingLocs 通过driverID和指定时间段返回司机行驶位置信息
+func GetDrivingLocs(driverID primitive.ObjectID, from, to time.Time) ([]DrivingLoc, error) {
 	drivingLocs := []DrivingLoc{}
 	query := bson.M{
-		"userID": userID,
+		"userID": driverID,
 		"gte":    bson.M{"createdAt": from},
 		"lte":    bson.M{"createdAt": to},
 	}
