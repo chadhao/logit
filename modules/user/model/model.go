@@ -33,6 +33,15 @@ type (
 		RoleIds         []int              `json:"roleIds,omitempty" bson:"roleIds"`
 	}
 
+	Token struct {
+		AccessToken         string             `json:"accessToken,omitempty"`
+		AccessTokenExpires  time.Time          `json:"accessTokenExpires,omitempty"`
+		RefreshToken        string             `json:"refreshToken,omitempty"`
+		RefreshTokenExpires time.Time          `json:"refreshTokenExpires,omitempty"`
+		UserId              primitive.ObjectID `json:"userId,omitempty"`
+		RoleIds             []int              `json:"roleIds,omitempty"`
+	}
+
 	Driver struct {
 		Id                   primitive.ObjectID   `json:"id" bson:"_id"`
 		UserId               primitive.ObjectID   `json:"userId" bson:"userId"`

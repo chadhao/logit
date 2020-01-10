@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 
+	"github.com/chadhao/logit/config"
 	"github.com/chadhao/logit/modules/user/model"
 	"github.com/labstack/echo/v4"
 )
@@ -28,7 +29,12 @@ func UserEntry(c echo.Context) error {
 		}
 	}
 
-	return c.JSON(http.StatusCreated, user)
+	token, err := user.IssueToken(c.Get("config").(config.Config))
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusCreated, token)
 }
 
 func CreateDriver(c echo.Context) error {

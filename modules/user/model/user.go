@@ -3,7 +3,10 @@ package model
 import (
 	"context"
 	"errors"
+	"time"
 
+	conf "github.com/chadhao/logit/config"
+	"github.com/dgrijalva/jwt-go"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -96,4 +99,42 @@ func (u *User) Login() error {
 	}
 
 	return nil
+}
+
+func (u *User) IssueToken(c conf.Config) (*Token, error) {
+	now := time.Now().UTC()
+
+	token := &Token{
+		AccessTokenExpires:  now.Add(30 * time.Minute),
+		RefreshTokenExpires: now.Add(168 * time.Hour),
+		UserId:              u.Id,
+		RoleIds:             u.RoleIds,
+	}
+
+	accessToken := jwt.New(jwt.SigningMethodHS256)
+	accessTokenClaims := accessToken.Claims.(jwt.MapClaims)
+	accessTokenClaims["iss"] = "logit.co.nz"
+	accessTokenClaims["exp"] = token.AccessTokenExpires.Unix()
+	accessTokenClaims["sub"] = u.Id.Hex()
+	accessTokenClaims["roles"] = u.RoleIds
+	accessTokenSigningKey, _ := c.Get("system.jwt.access.key")
+	if accessTokenSigned, err := accessToken.SignedString([]byte(accessTokenSigningKey)); err != nil {
+		return nil, err
+	} else {
+		token.AccessToken = accessTokenSigned
+	}
+
+	refreshToken := jwt.New(jwt.SigningMethodHS256)
+	refreshTokenClaims := refreshToken.Claims.(jwt.MapClaims)
+	refreshTokenClaims["iss"] = "logit.co.nz"
+	refreshTokenClaims["exp"] = token.RefreshTokenExpires.Unix()
+	refreshTokenClaims["sub"] = u.Id.Hex()
+	refreshTokenSigningKey, _ := c.Get("system.jwt.refresh.key")
+	if refreshTokenSigned, err := refreshToken.SignedString([]byte(refreshTokenSigningKey)); err != nil {
+		return nil, err
+	} else {
+		token.RefreshToken = refreshTokenSigned
+	}
+
+	return token, nil
 }

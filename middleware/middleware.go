@@ -8,9 +8,11 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-func LoadBeforeRouter(e *echo.Echo, r router.Router) error {
+func LoadBeforeRouter(e *echo.Echo, con config.Config, r router.Router) error {
+	// Routes and Config insertion
 	e.Pre(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			c.Set("config", con)
 			c.Set("router", r)
 			return next(c)
 		}
