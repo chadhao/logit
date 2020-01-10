@@ -3,20 +3,11 @@ package api
 import (
 	"errors"
 	"net/http"
-	"time"
 
 	"github.com/chadhao/logit/modules/record/model"
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
-
-// LoadRoutes 路由添加
-func LoadRoutes(e *echo.Echo) {
-	e.POST("/record", addRecord)
-	e.DELETE("/record/:id", deleteLastestRecord)
-	e.GET("/records", getRecords)
-	e.POST("/record/note", addNote)
-}
 
 // addRecord 添加一条新的记录
 func addRecord(c echo.Context) error {
@@ -44,35 +35,37 @@ func addRecord(c echo.Context) error {
 
 // deleteLastestRecord 删除上一条记录
 func deleteLastestRecord(c echo.Context) error {
-	recordID, err := primitive.ObjectIDFromHex(c.Param("id"))
-	if err != nil {
-		return err
-	}
+
 	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))
 	if err != nil {
 		return err
 	}
-	reqR := &reqRecord{
-		ID: recordID,
-	}
 
-	if err := reqR.deleteRecord(userID); err != nil {
+	req := new(reqRecord)
+	if err := c.Bind(req); err != nil {
 		return err
 	}
-	return nil
+
+	if err := req.deleteRecord(userID); err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, "success")
 }
 
 // getRecords 获取记录
-func getRecords(c echo.Context) (err error) {
-	reqR := new(reqRecords)
-	reqR.From, _ = time.Parse(time.RFC3339, c.QueryParam("from"))
-	reqR.To, _ = time.Parse(time.RFC3339, c.QueryParam("to"))
+func getRecords(c echo.Context) error {
 
 	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))
 	if err != nil {
 		return err
 	}
-	records, err := reqR.getRecords(userID)
+
+	req := new(reqRecords)
+	if err := c.Bind(req); err != nil {
+		return err
+	}
+
+	records, err := req.getRecords(userID)
 	if err != nil {
 		return err
 	}
@@ -80,7 +73,7 @@ func getRecords(c echo.Context) (err error) {
 }
 
 // addNote 为记录添加笔记
-func addNote(c echo.Context) (err error) {
+func addNote(c echo.Context) error {
 	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))
 	if err != nil {
 		return err

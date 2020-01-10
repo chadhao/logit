@@ -4,17 +4,17 @@ import (
 	"github.com/chadhao/logit/config"
 	"github.com/chadhao/logit/modules/record/api"
 	"github.com/chadhao/logit/modules/record/model"
-	"github.com/labstack/echo/v4"
+	"github.com/chadhao/logit/router"
 )
 
 // InitModule 模块初始化
-func InitModule(e *echo.Echo, c config.Config) error {
-	if err := model.New(c.LoadModuleConfig("record.db")); err != nil {
+func InitModule(r router.Router, c config.Config) error {
+	if err := model.New(c.LoadModuleConfig("record")); err != nil {
 		return err
 	}
 
 	// add routes
-	api.LoadRoutes(e)
+	api.LoadRoutes(r)
 	// other initialization code
 	return nil
 }

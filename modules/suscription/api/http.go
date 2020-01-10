@@ -8,11 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// LoadRoutes 路由添加
-func LoadRoutes(e *echo.Echo) {
-	e.GET("/suscription", getSuscription)
-}
-
 // getSuscription 获取
 func getSuscription(c echo.Context) error {
 	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))

@@ -28,7 +28,7 @@ func (s *Suscription) Add() (err error) {
 	return
 }
 
-func (s *Suscription) changeExpiredAt(expire string) (err error) {
+func (s *Suscription) changeExpiredDate(expire string) (err error) {
 	update := bson.M{"$set": bson.M{"expiredAt": expire}}
 	_, err = suscriptionCollection.UpdateOne(context.TODO(), bson.M{"_id": s.DriverID}, update)
 	return
@@ -86,7 +86,7 @@ func (r *Record) Add(days int) (err error) {
 	}
 
 	// 改变该用户订阅状态的过期时间，为结束时间
-	if err = s.changeExpiredAt(r.EndDate); err != nil {
+	if err = s.changeExpiredDate(r.EndDate); err != nil {
 		return
 	}
 	return
