@@ -3,9 +3,9 @@ package api
 import (
 	"net/http"
 
+	"github.com/chadhao/logit/config"
 	"github.com/chadhao/logit/modules/user/model"
 	"github.com/labstack/echo/v4"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func UserEntry(c echo.Context) error {
@@ -18,13 +18,23 @@ func UserEntry(c echo.Context) error {
 	if err := c.Bind(&user); err != nil {
 		return err
 	}
-	user.Id = primitive.NewObjectID()
 
-	if err := user.Create(); err != nil {
+	if !user.Exists() && user.ValidForRegister() {
+		if err := user.Create(); err != nil {
+			return err
+		}
+	} else {
+		if err := user.Login(); err != nil {
+			return err
+		}
+	}
+
+	token, err := user.IssueToken(c.Get("config").(config.Config))
+	if err != nil {
 		return err
 	}
 
-	return c.JSON(http.StatusCreated, user)
+	return c.JSON(http.StatusCreated, token)
 }
 
 func CreateDriver(c echo.Context) error {

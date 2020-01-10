@@ -27,7 +27,7 @@ func main() {
 		panic(err.Error())
 	}
 
-	middleware.LoadBeforeRouter(e, r)
+	middleware.LoadBeforeRouter(e, c, r)
 	middleware.LoadAfterRouter(e, c)
 	r.Register(e)
 

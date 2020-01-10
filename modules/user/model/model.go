@@ -23,18 +23,23 @@ const (
 
 type (
 	User struct {
-		Id       primitive.ObjectID   `json:"id" bson:"_id"`
-		Phone    string               `json:"phone" bson:"phone"`
-		Email    string               `json:"email" bson:"email"`
-		Password string               `json:"password" bson:"password"`
-		Pin      string               `json:"pin" bson:"pin"`
-		DriverId primitive.ObjectID   `json:"driverId" bson:"driverId"`
-		RoleIds  []primitive.ObjectID `json:"roleIds" bson:"roleIds"`
+		Id              primitive.ObjectID `json:"id,omitempty" bson:"_id"`
+		Phone           string             `json:"phone,omitempty" bson:"phone"`
+		Email           string             `json:"email,omitempty" bson:"email"`
+		Password        string             `json:"password,omitempty" bson:"password"`
+		ConfirmPassword string             `json:"confirmPassword,omitempty" bson:"-"`
+		Pin             string             `json:"pin,omitempty" bson:"pin"`
+		DriverId        primitive.ObjectID `json:"driverId,omitempty" bson:"driverId"`
+		RoleIds         []int              `json:"roleIds,omitempty" bson:"roleIds"`
 	}
 
-	Role struct {
-		Id   primitive.ObjectID `json:"id" bson:"_id"`
-		Name string             `json:"name" bson:"name"`
+	Token struct {
+		AccessToken         string             `json:"accessToken,omitempty"`
+		AccessTokenExpires  time.Time          `json:"accessTokenExpires,omitempty"`
+		RefreshToken        string             `json:"refreshToken,omitempty"`
+		RefreshTokenExpires time.Time          `json:"refreshTokenExpires,omitempty"`
+		UserId              primitive.ObjectID `json:"userId,omitempty"`
+		RoleIds             []int              `json:"roleIds,omitempty"`
 	}
 
 	Driver struct {

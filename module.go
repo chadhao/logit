@@ -5,6 +5,7 @@ import (
 	"github.com/chadhao/logit/modules/location"
 	"github.com/chadhao/logit/modules/record"
 	"github.com/chadhao/logit/modules/suscription"
+	"github.com/chadhao/logit/modules/user"
 	"github.com/chadhao/logit/router"
 )
 
@@ -13,7 +14,7 @@ type moduleShutdown func()
 
 var modulesToBeLoaded = []moduleInit{
 	// message.InitModule,
-	// user.InitModule,
+	user.InitModule,
 
 	record.InitModule,
 	location.InitModule,
@@ -22,7 +23,7 @@ var modulesToBeLoaded = []moduleInit{
 }
 
 var modulesToBeShutdown = []moduleShutdown{
-	// user.ShutdownModule,
+	user.ShutdownModule,
 	record.ShutdownModule,
 	location.ShutdownModule,
 	suscription.ShutdownModule,

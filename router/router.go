@@ -41,12 +41,43 @@ func (r *router) Register(e *echo.Echo) {
 }
 
 func (r *router) Match(m string, p string) (*Route, error) {
+	requestPath := strings.Split(trimFirst(strings.ToLower(p)), "/")
 	for _, route := range r.routes {
-		if m == route.Method && route.Path == strings.ToLower(p) {
+		if m != route.Method {
+			continue
+		}
+
+		routePath := strings.Split(trimFirst(route.Path), "/")
+		if len(requestPath) != len(routePath) {
+			continue
+		}
+
+		match := true
+		for i, s := range requestPath {
+			if strings.HasPrefix(routePath[i], ":") {
+				continue
+			}
+			if routePath[i] != s {
+				match = false
+				break
+			}
+		}
+
+		if match {
 			return route, nil
 		}
+
 	}
 	return nil, errors.New("not found")
+}
+
+func trimFirst(s string) string {
+	for i := range s {
+		if i > 0 {
+			return s[i:]
+		}
+	}
+	return s[:0]
 }
 
 func New() Router {
