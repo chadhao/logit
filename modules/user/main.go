@@ -3,15 +3,15 @@ package user
 import (
 	"github.com/chadhao/logit/config"
 	"github.com/chadhao/logit/modules/user/model"
-	"github.com/labstack/echo/v4"
+	"github.com/chadhao/logit/router"
 )
 
-func InitModule(e *echo.Echo, c config.Config) error {
+func InitModule(r router.Router, c config.Config) error {
 	if err := model.New(c.LoadModuleConfig("user.db")); err != nil {
 		return err
 	}
 
-	loadRoutes(e)
+	loadRoutes(r)
 
 	return nil
 }
