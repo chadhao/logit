@@ -10,7 +10,7 @@ import (
 
 var KEY_PREFIX = "/logit"
 var CLEINT_ENDPOINTS = []string{
-	"localhost:2379",
+	"dev.logit.co.nz:2379",
 }
 
 type (

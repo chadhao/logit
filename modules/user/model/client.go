@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"time"
 )
 
 var config map[string]string
@@ -19,7 +18,7 @@ func connect() error {
 	database := config["user.db.database"]
 
 	var err error
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	connectionString := fmt.Sprintf("mongodb+srv://%s:%s@%s/test?retryWrites=true&w=majority", username, password, uri)
 	mongoClient, err = mongo.Connect(ctx, options.Client().ApplyURI(connectionString))
 	cancel()
@@ -44,7 +43,7 @@ func New(c map[string]string) error {
 }
 
 func Close() {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	mongoClient.Disconnect(ctx)
 	cancel()
 }

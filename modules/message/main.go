@@ -2,10 +2,10 @@ package message
 
 import (
 	"github.com/chadhao/logit/config"
-	"github.com/labstack/echo/v4"
+	"github.com/chadhao/logit/router"
 )
 
-func InitModule(e *echo.Echo, c config.Config) error {
+func InitModule(e router.Router, c config.Config) error {
 	// load config
 	// add routes
 	// other initialization code
