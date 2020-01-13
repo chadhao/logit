@@ -17,7 +17,7 @@ func addDrivingLoc(c echo.Context) error {
 	if !roles.Is(constant.ROLE_DRIVER) {
 		return errors.New("not driver")
 	}
-	userID, _ := primitive.ObjectIDFromHex(c.Get("user").(string))
+	userID, _ := c.Get("user").(primitive.ObjectID)
 
 	req := new(reqAddDrivingLoc)
 	if err := c.Bind(req); err != nil {

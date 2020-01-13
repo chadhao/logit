@@ -19,7 +19,7 @@ func addRecord(c echo.Context) error {
 		return errors.New("not driver")
 	}
 
-	userID, _ := primitive.ObjectIDFromHex(c.Get("user").(string))
+	userID, _ := c.Get("user").(primitive.ObjectID)
 
 	req := new(reqAddRecord)
 	if err := c.Bind(req); err != nil {
@@ -47,7 +47,7 @@ func deleteLastestRecord(c echo.Context) error {
 		return errors.New("not driver")
 	}
 
-	userID, _ := primitive.ObjectIDFromHex(c.Get("user").(string))
+	userID, _ := c.Get("user").(primitive.ObjectID)
 
 	req := new(reqRecord)
 	if err := c.Bind(req); err != nil {
@@ -68,10 +68,7 @@ func getRecords(c echo.Context) error {
 		return err
 	}
 
-	userID, err := primitive.ObjectIDFromHex(c.Get("user").(string))
-	if err != nil {
-		return err
-	}
+	userID, _ := c.Get("user").(primitive.ObjectID)
 
 	roles := utils.RolesAssert(c.Get("roles"))
 	switch {
@@ -99,10 +96,8 @@ func addNote(c echo.Context) error {
 		return err
 	}
 
-	uid, err := primitive.ObjectIDFromHex(c.Get("user").(string))
-	if err != nil {
-		return err
-	}
+	uid, _ := c.Get("user").(primitive.ObjectID)
+
 	roles := utils.RolesAssert(c.Get("roles"))
 	switch {
 	case roles.Is(constant.ROLE_ADMIN):
@@ -114,7 +109,10 @@ func addNote(c echo.Context) error {
 		return errors.New("not allowed")
 	}
 
-	var note model.INote
+	var (
+		note model.INote
+		err  error
+	)
 	switch req.NoteType {
 	case model.OTHERWORKNOTE:
 		note, err = req.constructToOtherWorkNote()
