@@ -16,7 +16,7 @@ func LoadRoutes(r router.Router) {
 		Roles:   []int{constant.ROLE_DRIVER},
 	})
 	r.Add(&router.Route{
-		Path:    "/location/:userID",
+		Path:    "/location",
 		Method:  http.MethodGet,
 		Handler: getDrivingLocs,
 		Roles:   []int{constant.ROLE_SUPER},

@@ -18,7 +18,7 @@ func LoadRoutes(r router.Router) {
 	r.Add(&router.Route{
 		Path:    "/record/:id",
 		Method:  http.MethodDelete,
-		Handler: deleteLastestRecord,
+		Handler: deleteLatestRecord,
 		Roles:   []int{constant.ROLE_DRIVER},
 	})
 	r.Add(&router.Route{

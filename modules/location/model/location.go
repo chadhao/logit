@@ -21,7 +21,7 @@ type (
 	// DrivingLoc 司机在行驶过程中的位置信息
 	DrivingLoc struct {
 		ID        primitive.ObjectID `bson:"_id" json:"id" valid:"-"`
-		UserID    primitive.ObjectID `bson:"userID" json:"userID" valid:"required"`
+		DriverID  primitive.ObjectID `bson:"driverID" json:"driverID" valid:"required"`
 		CreatedAt time.Time          `bson:"createdAt" json:"createdAt" valid:"required"`
 		Coors     Coors              `bson:"coors" json:"coors" valid:"required"`
 	}
@@ -88,9 +88,9 @@ func (coors Coors) GetAddrFromCoors() (addr Address, err error) {
 func GetDrivingLocs(driverID primitive.ObjectID, from, to time.Time) ([]DrivingLoc, error) {
 	drivingLocs := []DrivingLoc{}
 	query := bson.M{
-		"userID": driverID,
-		"gte":    bson.M{"createdAt": from},
-		"lte":    bson.M{"createdAt": to},
+		"driverID": driverID,
+		"gte":      bson.M{"createdAt": from},
+		"lte":      bson.M{"createdAt": to},
 	}
 	cursor, err := drivingLocCol.Find(context.TODO(), query)
 	if err != nil {

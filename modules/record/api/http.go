@@ -19,7 +19,7 @@ func addRecord(c echo.Context) error {
 		return errors.New("not driver")
 	}
 
-	userID, _ := primitive.ObjectIDFromHex(c.Get("user").(string))
+	uid, _ := c.Get("user").(primitive.ObjectID)
 
 	req := new(reqAddRecord)
 	if err := c.Bind(req); err != nil {
@@ -29,7 +29,7 @@ func addRecord(c echo.Context) error {
 	// vehicleID := user.GetVehicleID()
 	vehicleID := primitive.NewObjectID()
 
-	r, err := req.constructToRecord(userID, vehicleID)
+	r, err := req.constructToRecord(uid, vehicleID)
 	if err != nil {
 		return err
 	}
@@ -39,22 +39,23 @@ func addRecord(c echo.Context) error {
 	return c.JSON(http.StatusOK, r)
 }
 
-// deleteLastestRecord 删除上一条记录
-func deleteLastestRecord(c echo.Context) error {
+// deleteLatestRecord 删除上一条记录
+func deleteLatestRecord(c echo.Context) error {
 
 	roles := utils.RolesAssert(c.Get("roles"))
 	if !roles.Is(constant.ROLE_DRIVER) {
 		return errors.New("not driver")
 	}
 
-	userID, _ := primitive.ObjectIDFromHex(c.Get("user").(string))
+	uid, _ := c.Get("user").(primitive.ObjectID)
 
 	req := new(reqRecord)
-	if err := c.Bind(req); err != nil {
+	var err error
+	if req.ID, err = primitive.ObjectIDFromHex(c.Param("id")); err != nil {
 		return err
 	}
 
-	if err := req.deleteRecord(userID); err != nil {
+	if err := req.deleteRecord(uid); err != nil {
 		return err
 	}
 	return c.JSON(http.StatusOK, "success")
@@ -67,18 +68,14 @@ func getRecords(c echo.Context) error {
 	if err := c.Bind(req); err != nil {
 		return err
 	}
-
-	userID, err := primitive.ObjectIDFromHex(c.Get("user").(string))
-	if err != nil {
-		return err
-	}
+	uid, _ := c.Get("user").(primitive.ObjectID)
 
 	roles := utils.RolesAssert(c.Get("roles"))
 	switch {
 	case roles.Is(constant.ROLE_ADMIN):
 	case roles.Is(constant.ROLE_DRIVER):
-		if userID != req.DriverID {
-			return errors.New("not authorized")
+		if req.DriverID != uid.Hex() {
+			return errors.New("no authorization")
 		}
 	default:
 		return errors.New("not allowed")
@@ -99,22 +96,23 @@ func addNote(c echo.Context) error {
 		return err
 	}
 
-	uid, err := primitive.ObjectIDFromHex(c.Get("user").(string))
-	if err != nil {
-		return err
-	}
+	uid, _ := c.Get("user").(primitive.ObjectID)
+
 	roles := utils.RolesAssert(c.Get("roles"))
 	switch {
 	case roles.Is(constant.ROLE_ADMIN):
 	case roles.Is(constant.ROLE_DRIVER):
-		if !req.isUsersRecord(uid) {
+		if !req.isDriversRecord(uid) {
 			return errors.New("no authorization")
 		}
 	default:
 		return errors.New("not allowed")
 	}
 
-	var note model.INote
+	var (
+		note model.INote
+		err  error
+	)
 	switch req.NoteType {
 	case model.OTHERWORKNOTE:
 		note, err = req.constructToOtherWorkNote()
