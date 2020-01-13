@@ -68,7 +68,7 @@ func (reqR *reqRecords) getRecords() ([]*respRecord, error) {
 
 // reqRecord 请求获取记录
 type reqRecord struct {
-	ID primitive.ObjectID `json:"id" query:"id" valid:"required"`
+	ID primitive.ObjectID
 }
 
 // getRecord 获取记录

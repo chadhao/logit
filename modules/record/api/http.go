@@ -39,8 +39,8 @@ func addRecord(c echo.Context) error {
 	return c.JSON(http.StatusOK, r)
 }
 
-// deleteLastestRecord 删除上一条记录
-func deleteLastestRecord(c echo.Context) error {
+// deleteLatestRecord 删除上一条记录
+func deleteLatestRecord(c echo.Context) error {
 
 	roles := utils.RolesAssert(c.Get("roles"))
 	if !roles.Is(constant.ROLE_DRIVER) {
@@ -50,7 +50,8 @@ func deleteLastestRecord(c echo.Context) error {
 	uid, _ := c.Get("user").(primitive.ObjectID)
 
 	req := new(reqRecord)
-	if err := c.Bind(req); err != nil {
+	var err error
+	if req.ID, err = primitive.ObjectIDFromHex(c.Param("id")); err != nil {
 		return err
 	}
 
