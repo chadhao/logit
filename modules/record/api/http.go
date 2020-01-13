@@ -5,25 +5,31 @@ import (
 	"net/http"
 
 	"github.com/chadhao/logit/modules/record/model"
+	"github.com/chadhao/logit/modules/user/constant"
+	"github.com/chadhao/logit/utils"
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // addRecord 添加一条新的记录
 func addRecord(c echo.Context) error {
-	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))
-	if err != nil {
-		return err
+
+	roles := utils.RolesAssert(c.Get("roles"))
+	if !roles.Is(constant.ROLE_DRIVER) {
+		return errors.New("not driver")
 	}
-	rar := new(reqAddRecord)
-	if err := c.Bind(rar); err != nil {
+
+	userID, _ := primitive.ObjectIDFromHex(c.Get("user").(string))
+
+	req := new(reqAddRecord)
+	if err := c.Bind(req); err != nil {
 		return err
 	}
 
 	// vehicleID := user.GetVehicleID()
 	vehicleID := primitive.NewObjectID()
 
-	r, err := rar.constructToRecord(userID, vehicleID)
+	r, err := req.constructToRecord(userID, vehicleID)
 	if err != nil {
 		return err
 	}
@@ -36,10 +42,12 @@ func addRecord(c echo.Context) error {
 // deleteLastestRecord 删除上一条记录
 func deleteLastestRecord(c echo.Context) error {
 
-	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))
-	if err != nil {
-		return err
+	roles := utils.RolesAssert(c.Get("roles"))
+	if !roles.Is(constant.ROLE_DRIVER) {
+		return errors.New("not driver")
 	}
+
+	userID, _ := primitive.ObjectIDFromHex(c.Get("user").(string))
 
 	req := new(reqRecord)
 	if err := c.Bind(req); err != nil {
@@ -55,17 +63,28 @@ func deleteLastestRecord(c echo.Context) error {
 // getRecords 获取记录
 func getRecords(c echo.Context) error {
 
-	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))
-	if err != nil {
-		return err
-	}
-
 	req := new(reqRecords)
 	if err := c.Bind(req); err != nil {
 		return err
 	}
 
-	records, err := req.getRecords(userID)
+	userID, err := primitive.ObjectIDFromHex(c.Get("user").(string))
+	if err != nil {
+		return err
+	}
+
+	roles := utils.RolesAssert(c.Get("roles"))
+	switch {
+	case roles.Is(constant.ROLE_ADMIN):
+	case roles.Is(constant.ROLE_DRIVER):
+		if userID != req.DriverID {
+			return errors.New("not authorized")
+		}
+	default:
+		return errors.New("not allowed")
+	}
+
+	records, err := req.getRecords()
 	if err != nil {
 		return err
 	}
@@ -74,16 +93,25 @@ func getRecords(c echo.Context) error {
 
 // addNote 为记录添加笔记
 func addNote(c echo.Context) error {
-	userID, err := primitive.ObjectIDFromHex(c.Request().Header.Get("userID"))
-	if err != nil {
-		return err
-	}
+
 	req := new(reqAddNote)
 	if err := c.Bind(req); err != nil {
 		return err
 	}
-	if !req.isUsersRecord(userID) {
-		return errors.New("no authorization")
+
+	uid, err := primitive.ObjectIDFromHex(c.Get("user").(string))
+	if err != nil {
+		return err
+	}
+	roles := utils.RolesAssert(c.Get("roles"))
+	switch {
+	case roles.Is(constant.ROLE_ADMIN):
+	case roles.Is(constant.ROLE_DRIVER):
+		if !req.isUsersRecord(uid) {
+			return errors.New("no authorization")
+		}
+	default:
+		return errors.New("not allowed")
 	}
 
 	var note model.INote
@@ -94,7 +122,7 @@ func addNote(c echo.Context) error {
 			return err
 		}
 	case model.MODIFICATIONNOTE:
-		note, err = req.constructToModificationNote(userID)
+		note, err = req.constructToModificationNote(uid)
 		if err != nil {
 			return err
 		}

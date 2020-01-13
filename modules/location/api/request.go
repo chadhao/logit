@@ -28,8 +28,9 @@ func (reqAdd *reqAddDrivingLoc) constructToDrivingLoc(userID primitive.ObjectID)
 
 // reqDrivingLocs 行驶信息请求结构
 type reqDrivingLocs struct {
-	From time.Time `json:"from" query:"from" valid:"required"`
-	To   time.Time `json:"to" query:"to" valid:"optional"`
+	DriverID primitive.ObjectID `json:"driverID" query:"driverID" valid:"required"`
+	From     time.Time          `json:"from" query:"from" valid:"required"`
+	To       time.Time          `json:"to" query:"to" valid:"optional"`
 }
 
 func (req *reqDrivingLocs) valid() error {
@@ -45,11 +46,11 @@ func (req *reqDrivingLocs) valid() error {
 	return nil
 }
 
-func (req *reqDrivingLocs) getDrivingLocs(userID primitive.ObjectID) ([]model.DrivingLoc, error) {
+func (req *reqDrivingLocs) getDrivingLocs() ([]model.DrivingLoc, error) {
 	if err := req.valid(); err != nil {
 		return nil, err
 	}
-	drivingLocs, err := model.GetDrivingLocs(userID, req.From, req.To)
+	drivingLocs, err := model.GetDrivingLocs(req.DriverID, req.From, req.To)
 	if err != nil {
 		return nil, err
 	}
