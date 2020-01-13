@@ -88,7 +88,7 @@ func (l *Location) fillFull() (err error) {
 // Record 记录
 type Record struct {
 	ID            primitive.ObjectID `bson:"_id" json:"id" valid:"-"`
-	UserID        primitive.ObjectID `bson:"userID" json:"userID" valid:"required"`
+	DriverID      primitive.ObjectID `bson:"driverID" json:"driverID" valid:"required"`
 	Type          Type               `bson:"type" json:"type" valid:"required"`
 	StartTime     time.Time          `bson:"startTime" json:"startTime" valid:"required"`
 	EndTime       *time.Time         `bson:"endTime,omitempty" json:"endTime,omitempty" valid:"-"`
@@ -105,7 +105,7 @@ type Record struct {
 // Add 记录添加
 func (r *Record) Add() (err error) {
 
-	lastRec, err := getLastestRecord(r.UserID)
+	lastRec, err := getLastestRecord(r.DriverID)
 	if err != nil && err != mongo.ErrNoDocuments {
 		return err
 	}
@@ -183,17 +183,17 @@ func (r *Record) valid() error {
 }
 
 func (r *Record) isLatestRecord() bool {
-	lastest, err := getLastestRecord(r.UserID)
+	lastest, err := getLastestRecord(r.DriverID)
 	if err != nil {
 		return false
 	}
 	return lastest.ID == r.ID
 }
 
-func getLastestRecord(userID primitive.ObjectID) (*Record, error) {
+func getLastestRecord(driverID primitive.ObjectID) (*Record, error) {
 	lastRec := new(Record)
 	opts := options.FindOne().SetSort(bson.D{{Key: "_id", Value: -1}})
-	err := recordCollection.FindOne(context.TODO(), bson.M{"userID": userID, "deletedAt": nil}, opts).Decode(lastRec)
+	err := recordCollection.FindOne(context.TODO(), bson.M{"driverID": driverID, "deletedAt": nil}, opts).Decode(lastRec)
 	return lastRec, err
 }
 
@@ -205,10 +205,10 @@ func GetRecord(id primitive.ObjectID) (*Record, error) {
 }
 
 // GetRecords 获取用户时间段内的记录
-func GetRecords(userID primitive.ObjectID, from, to time.Time, getDeleted bool) ([]Record, error) {
+func GetRecords(driverID primitive.ObjectID, from, to time.Time, getDeleted bool) ([]Record, error) {
 	records := []Record{}
 	filter := bson.M{
-		"userID":    userID,
+		"driverID":  driverID,
 		"startTime": bson.M{"$gte": from},
 		"$or": []bson.M{
 			bson.M{"endTime": bson.M{"$lte": to}},

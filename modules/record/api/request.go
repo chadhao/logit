@@ -12,9 +12,9 @@ import (
 
 // reqRecords 请求获取记录
 type reqRecords struct {
-	DriverID primitive.ObjectID `json:"driverID" query:"driverID" valid:"required"`
-	From     time.Time          `json:"from" query:"from" valid:"required"`
-	To       time.Time          `json:"to" query:"to" valid:"optional"`
+	DriverID string    `query:"driverID" valid:"required"`
+	From     time.Time `query:"from" valid:"required"`
+	To       time.Time `query:"to" valid:"optional"`
 }
 
 func (reqR *reqRecords) valid() error {
@@ -35,8 +35,13 @@ func (reqR *reqRecords) getRecords() ([]*respRecord, error) {
 	if err := reqR.valid(); err != nil {
 		return nil, err
 	}
+	driverID, err := primitive.ObjectIDFromHex(reqR.DriverID)
+	if err != nil {
+		return nil, err
+	}
+
 	// 获取记录
-	records, err := model.GetRecords(reqR.DriverID, reqR.From, reqR.To, false)
+	records, err := model.GetRecords(driverID, reqR.From, reqR.To, false)
 	if err != nil {
 		return nil, err
 	}
@@ -87,13 +92,13 @@ func (reqRecord *reqRecord) getRecord() (*respRecord, error) {
 }
 
 // deleteRecord 删除记录
-func (reqRecord *reqRecord) deleteRecord(userID primitive.ObjectID) error {
+func (reqRecord *reqRecord) deleteRecord(driverID primitive.ObjectID) error {
 	// 获取记录
 	r, err := model.GetRecord(reqRecord.ID)
 	if err != nil {
 		return err
 	}
-	if r.UserID != userID {
+	if r.DriverID != driverID {
 		return errors.New("no authorization")
 	}
 
@@ -141,7 +146,7 @@ func (reqAddR *reqAddRecord) valid() error {
 }
 
 // constructToRecord 将reqAddRecord构造为Record
-func (reqAddR *reqAddRecord) constructToRecord(userID, vehicleID primitive.ObjectID) (*model.Record, error) {
+func (reqAddR *reqAddRecord) constructToRecord(driverID, vehicleID primitive.ObjectID) (*model.Record, error) {
 	if err := reqAddR.valid(); err != nil {
 		return nil, err
 	}
@@ -151,7 +156,7 @@ func (reqAddR *reqAddRecord) constructToRecord(userID, vehicleID primitive.Objec
 	}
 	r := &model.Record{
 		ID:            primitive.NewObjectID(),
-		UserID:        userID,
+		DriverID:      driverID,
 		Type:          reqAddR.Type,
 		StartTime:     t,
 		EndTime:       reqAddR.EndTime,
@@ -230,10 +235,10 @@ func (r *reqAddNote) constructToModificationNote(by primitive.ObjectID) (*model.
 	return mn, nil
 }
 
-func (r *reqAddNote) isUsersRecord(userID primitive.ObjectID) bool {
+func (r *reqAddNote) isDriversRecord(driverID primitive.ObjectID) bool {
 	rec, err := model.GetRecord(r.RecordID)
 	if err != nil {
 		return false
 	}
-	return rec.UserID == userID
+	return rec.DriverID == driverID
 }
