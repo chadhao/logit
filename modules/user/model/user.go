@@ -33,6 +33,27 @@ func (u *User) Create() error {
 	return nil
 }
 
+func (u *User) Update() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	filter := bson.D{{"_id", u.Id}}
+	userBson, err := bson.Marshal(u)
+	if err != nil {
+		return err
+	}
+
+	result, err := db.Collection("user").ReplaceOne(ctx, filter, userBson)
+	if err != nil {
+		return nil
+	}
+	if result.MatchedCount != 1 {
+		return errors.New("User not updated")
+	}
+
+	return nil
+}
+
 func (u *User) Exists() bool {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -57,10 +78,6 @@ func (u *User) Exists() bool {
 	return false
 }
 
-func (u *User) ValidForRegister() bool {
-	return len(u.Phone) > 0 && len(u.Password) > 0
-}
-
 func (u *User) Find() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -72,8 +89,6 @@ func (u *User) Find() error {
 		filter = bson.D{{"phone", u.Phone}}
 	} else if len(u.Email) > 0 {
 		filter = bson.D{{"email", u.Email}}
-	} else if !u.DriverId.IsZero() {
-		filter = bson.D{{"driverId", u.DriverId}}
 	} else {
 		return errors.New("No query condition found")
 	}
@@ -87,7 +102,7 @@ func (u *User) Find() error {
 	return nil
 }
 
-func (u *User) Login() error {
+func (u *User) PasswordLogin() error {
 	pass := u.Password
 
 	if err := u.Find(); err != nil {
