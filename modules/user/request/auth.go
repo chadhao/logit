@@ -110,7 +110,7 @@ func (r *ExistanceRequest) Check() map[string]bool {
 		d := model.Driver{
 			LicenceNumber: r.Licence,
 		}
-		result["licemnce"] = d.Exists()
+		result["license"] = d.Exists()
 	}
 	return result
 }
