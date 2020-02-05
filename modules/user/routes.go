@@ -14,6 +14,11 @@ func loadRoutes(r router.Router) {
 	// 	Handler: api.UserEntry,
 	// })
 	r.Add(&router.Route{
+		Path:    "/user/refresh",
+		Method:  http.MethodPost,
+		Handler: api.RefreshToken,
+	})
+	r.Add(&router.Route{
 		Path:    "/user/existance",
 		Method:  http.MethodPost,
 		Handler: api.CheckExistance,

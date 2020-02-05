@@ -10,23 +10,46 @@ import (
 )
 
 func CheckExistance(c echo.Context) error {
-	e := request.ExistanceRequest{}
+	r := request.ExistanceRequest{}
 
-	if err := c.Bind(&e); err != nil {
+	if err := c.Bind(&r); err != nil {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, e.Check())
+	return c.JSON(http.StatusOK, r.Check())
+}
+
+func RefreshToken(c echo.Context) error {
+	r := request.RefreshTokenRequest{}
+
+	if err := c.Bind(&r); err != nil {
+		return err
+	}
+
+	config := c.Get("config").(config.Config)
+	user, err := r.Validate(config)
+	if err != nil {
+		return err
+	}
+	if err := user.Find(); err != nil {
+		return err
+	}
+	token, err := user.IssueToken(config)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, token)
 }
 
 func PasswordLogin(c echo.Context) error {
-	l := request.LoginRequest{}
+	r := request.LoginRequest{}
 
-	if err := c.Bind(&l); err != nil {
+	if err := c.Bind(&r); err != nil {
 		return err
 	}
 
-	user, err := l.PasswordLogin()
+	user, err := r.PasswordLogin()
 	if err != nil {
 		return err
 	}

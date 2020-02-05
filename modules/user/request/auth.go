@@ -3,11 +3,16 @@ package request
 import (
 	"time"
 
+	"github.com/chadhao/logit/config"
 	"github.com/chadhao/logit/modules/user/model"
+	"github.com/dgrijalva/jwt-go"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type (
+	RefreshTokenRequest struct {
+		Toekn string `json:"token"`
+	}
 	LoginRequest struct {
 		Phone    string `json:"phone"`
 		Email    string `json:"email"`
@@ -32,6 +37,28 @@ type (
 		Licence string `json:"licence"`
 	}
 )
+
+func (r *RefreshTokenRequest) Validate(c config.Config) (*model.User, error) {
+	u := model.User{}
+
+	key, _ := c.Get("system.jwt.refresh.key")
+	keyFunc := func(t *jwt.Token) (interface{}, error) {
+		return key, nil
+	}
+	token, err := jwt.Parse(r.Toekn, keyFunc)
+	if err != nil {
+		return nil, err
+	}
+
+	claims := token.Claims.(jwt.StandardClaims)
+	userId, err := primitive.ObjectIDFromHex(claims.Subject)
+	if err != nil {
+		return nil, err
+	}
+	u.Id = userId
+
+	return &u, nil
+}
 
 func (r *LoginRequest) PasswordLogin() (*model.User, error) {
 	u := model.User{}
