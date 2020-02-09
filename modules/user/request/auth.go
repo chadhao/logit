@@ -43,15 +43,15 @@ func (r *RefreshTokenRequest) Validate(c config.Config) (*model.User, error) {
 
 	key, _ := c.Get("system.jwt.refresh.key")
 	keyFunc := func(t *jwt.Token) (interface{}, error) {
-		return key, nil
+		return []byte(key), nil
 	}
 	token, err := jwt.Parse(r.Toekn, keyFunc)
 	if err != nil {
 		return nil, err
 	}
 
-	claims := token.Claims.(jwt.StandardClaims)
-	userId, err := primitive.ObjectIDFromHex(claims.Subject)
+	claims := token.Claims.(jwt.MapClaims)
+	userId, err := primitive.ObjectIDFromHex(claims["sub"].(string))
 	if err != nil {
 		return nil, err
 	}
