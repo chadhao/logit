@@ -107,14 +107,15 @@ func (reqRecord *reqRecord) deleteRecord(driverID primitive.ObjectID) error {
 
 // reqAddRecord 添加记录请求结构
 type reqAddRecord struct {
-	Type          model.Type      `json:"type" valid:"required"`
-	StartTime     *time.Time      `json:"startTime,omitempty" valid:"optional"`
-	EndTime       *time.Time      `json:"endTime,omitempty" valid:"optional"`
-	StartLocation model.Location  `json:"startLocation" valid:"required"`
-	EndLocation   *model.Location `json:"endLocation,omitempty" valid:"-"`
-	StartMileAge  *float64        `json:"startDistance,omitempty" valid:"-"`
-	EndMileAge    *float64        `json:"endDistance,omitempty" valid:"-"`
-	ClientTime    *time.Time      `json:"clientTime,omitempty" valid:"optional"`
+	Type          model.Type         `json:"type" valid:"required"`
+	StartTime     *time.Time         `json:"startTime,omitempty" valid:"optional"`
+	EndTime       *time.Time         `json:"endTime,omitempty" valid:"optional"`
+	StartLocation model.Location     `json:"startLocation" valid:"required"`
+	EndLocation   *model.Location    `json:"endLocation,omitempty" valid:"-"`
+	VehicleID     primitive.ObjectID `json:"vehicleID" valid:"required"`
+	StartMileAge  *float64           `json:"startDistance,omitempty" valid:"-"`
+	EndMileAge    *float64           `json:"endDistance,omitempty" valid:"-"`
+	ClientTime    *time.Time         `json:"clientTime,omitempty" valid:"optional"`
 }
 
 // Valid 添加记录请求结构验证
@@ -146,7 +147,7 @@ func (reqAddR *reqAddRecord) valid() error {
 }
 
 // constructToRecord 将reqAddRecord构造为Record
-func (reqAddR *reqAddRecord) constructToRecord(driverID, vehicleID primitive.ObjectID) (*model.Record, error) {
+func (reqAddR *reqAddRecord) constructToRecord(driverID primitive.ObjectID) (*model.Record, error) {
 	if err := reqAddR.valid(); err != nil {
 		return nil, err
 	}
@@ -162,7 +163,7 @@ func (reqAddR *reqAddRecord) constructToRecord(driverID, vehicleID primitive.Obj
 		EndTime:       reqAddR.EndTime,
 		StartLocation: reqAddR.StartLocation,
 		EndLocation:   reqAddR.EndLocation,
-		VehicleID:     vehicleID,
+		VehicleID:     reqAddR.VehicleID,
 		StartMileAge:  reqAddR.StartMileAge,
 		EndMileAge:    reqAddR.EndMileAge,
 		ClientTime:    reqAddR.ClientTime,
