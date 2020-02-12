@@ -26,10 +26,7 @@ func addRecord(c echo.Context) error {
 		return err
 	}
 
-	// vehicleID := user.GetVehicleID()
-	vehicleID := primitive.NewObjectID()
-
-	r, err := req.constructToRecord(uid, vehicleID)
+	r, err := req.constructToRecord(uid)
 	if err != nil {
 		return err
 	}
