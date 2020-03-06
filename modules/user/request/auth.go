@@ -19,17 +19,22 @@ type (
 		Licence  string `json:"licence"`
 		Password string `json:"password"`
 	}
-	UserRegistrationRequest struct {
+	UserRegRequest struct {
 		Phone    string `json:"phone"`
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
-	DriverRegistrationRequest struct {
+	DriverRegRequest struct {
 		Id            primitive.ObjectID `json:"id"`
 		LicenceNumber string             `json:"licenceNumber"`
 		DateOfBirth   time.Time          `json:"dateOfBirth"`
 		Firstnames    string             `json:"firstnames"`
 		Surname       string             `json:"surname"`
+	}
+	TransportOperatorRegRequest struct {
+		Id            primitive.ObjectID `json:"id"`
+		LicenceNumber string             `json:"licenceNumber"`
+		Name          string             `json:"name"`
 	}
 	ExistanceRequest struct {
 		Phone   string `json:"phone"`
@@ -87,7 +92,7 @@ func (r *LoginRequest) PasswordLogin() (*model.User, error) {
 	return &u, nil
 }
 
-func (r *UserRegistrationRequest) Reg() (*model.User, error) {
+func (r *UserRegRequest) Reg() (*model.User, error) {
 	// Should add Request content validation here
 	u := model.User{
 		Phone:    r.Phone,
@@ -102,7 +107,7 @@ func (r *UserRegistrationRequest) Reg() (*model.User, error) {
 	return &u, nil
 }
 
-func (r *DriverRegistrationRequest) Reg() (*model.Driver, error) {
+func (r *DriverRegRequest) Reg() (*model.Driver, error) {
 	// Should add Request content validation here
 	d := model.Driver{
 		Id:            r.Id,

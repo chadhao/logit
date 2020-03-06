@@ -192,7 +192,7 @@ func (r *Record) isLatestRecord() bool {
 
 func getLastestRecord(driverID primitive.ObjectID) (*Record, error) {
 	lastRec := new(Record)
-	opts := options.FindOne().SetSort(bson.D{{Key: "_id", Value: -1}})
+	opts := options.FindOne().SetSort(bson.D{{Key: "startTime", Value: -1}})
 	err := recordCollection.FindOne(context.TODO(), bson.M{"driverID": driverID, "deletedAt": nil}, opts).Decode(lastRec)
 	return lastRec, err
 }
