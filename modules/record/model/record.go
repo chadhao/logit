@@ -218,3 +218,32 @@ func GetRecords(driverID primitive.ObjectID, from, to time.Time, getDeleted bool
 	}
 	return records, nil
 }
+
+// Records .
+type Records []Record
+
+// SyncAdd 批量上传添加
+func (rs Records) SyncAdd() (err error) {
+
+	lastRec, err := getLastestRecord(rs[0].DriverID)
+	if err != nil && err != mongo.ErrNoDocuments {
+		return err
+	}
+	l := len(rs)
+	for i := 0; i < l; i++ {
+		if err = rs[i].beforeAdd(lastRec); err != nil {
+			return
+		}
+		lastRec = &rs[i]
+	}
+
+	// 数据库添加记录
+	rsI := make([]interface{}, l)
+	for i := range rs {
+		rsI[i] = rs[i]
+	}
+	if _, err = recordCollection.InsertMany(context.TODO(), rsI); err != nil {
+		return
+	}
+	return
+}

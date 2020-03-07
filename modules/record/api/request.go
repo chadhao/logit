@@ -141,9 +141,61 @@ func (reqAddR *reqAddRecord) valid() error {
 	return nil
 }
 
+// syncValid 上传记录请求结构验证
+func (reqAddR *reqAddRecord) syncValid() error {
+	if reqAddR.Type != model.WORK && reqAddR.Type != model.REST {
+		return errors.New("no match type")
+	}
+	if reqAddR.ClientTime == nil {
+		return errors.New("clientTime is required")
+	}
+	if _, err := valid.ValidateStruct(reqAddR); err != nil {
+		return err
+	}
+	// 1. 时间检验
+	if reqAddR.Time.IsZero() {
+		return errors.New("time is required")
+	}
+	if reqAddR.Time.After(time.Now()) {
+		return errors.New("cannot add future time")
+	}
+
+	// 2. 若公里数不为空时的检验
+	if reqAddR.StartMileAge != nil && reqAddR.EndMileAge != nil && *reqAddR.StartMileAge > *reqAddR.EndMileAge {
+		return errors.New("startMileAge should be less than endMileAge")
+	}
+	return nil
+}
+
 // constructToRecord 将reqAddRecord构造为Record
 func (reqAddR *reqAddRecord) constructToRecord(driverID primitive.ObjectID) (*model.Record, error) {
 	if err := reqAddR.valid(); err != nil {
+		return nil, err
+	}
+	duration, err := time.ParseDuration(reqAddR.Duration)
+	if err != nil {
+		return nil, err
+	}
+	r := &model.Record{
+		ID:            primitive.NewObjectID(),
+		DriverID:      driverID,
+		Type:          reqAddR.Type,
+		Time:          reqAddR.Time,
+		Duration:      duration,
+		StartLocation: reqAddR.StartLocation,
+		EndLocation:   reqAddR.EndLocation,
+		VehicleID:     reqAddR.VehicleID,
+		StartMileAge:  reqAddR.StartMileAge,
+		EndMileAge:    reqAddR.EndMileAge,
+		ClientTime:    reqAddR.ClientTime,
+		CreatedAt:     time.Now(),
+	}
+	return r, nil
+}
+
+// constructToSyncRecord 将reqAddRecord构造为上传需要的Record
+func (reqAddR *reqAddRecord) constructToSyncRecord(driverID primitive.ObjectID) (*model.Record, error) {
+	if err := reqAddR.syncValid(); err != nil {
 		return nil, err
 	}
 	duration, err := time.ParseDuration(reqAddR.Duration)
