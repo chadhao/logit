@@ -108,14 +108,14 @@ func (reqRecord *reqRecord) deleteRecord(driverID primitive.ObjectID) error {
 // reqAddRecord 添加记录请求结构
 type reqAddRecord struct {
 	Type          model.Type         `json:"type" valid:"required"`
-	StartTime     *time.Time         `json:"startTime,omitempty" valid:"optional"`
-	EndTime       *time.Time         `json:"endTime,omitempty" valid:"optional"`
+	Time          time.Time          `json:"time" valid:"required"`
+	Duration      string             `json:"duration" valid:"required"`
 	StartLocation model.Location     `json:"startLocation" valid:"required"`
-	EndLocation   *model.Location    `json:"endLocation,omitempty" valid:"-"`
+	EndLocation   model.Location     `json:"endLocation" valid:"required"`
 	VehicleID     primitive.ObjectID `json:"vehicleID" valid:"required"`
 	StartMileAge  *float64           `json:"startDistance,omitempty" valid:"-"`
 	EndMileAge    *float64           `json:"endDistance,omitempty" valid:"-"`
-	ClientTime    *time.Time         `json:"clientTime,omitempty" valid:"optional"`
+	ClientTime    *time.Time         `json:"clientTime,omitempty" valid:"-"`
 }
 
 // Valid 添加记录请求结构验证
@@ -127,16 +127,11 @@ func (reqAddR *reqAddRecord) valid() error {
 		return err
 	}
 	// 1. 时间检验
-	if reqAddR.StartTime != nil && reqAddR.EndTime != nil {
-		if reqAddR.StartTime.After(*reqAddR.EndTime) {
-			return errors.New("startTime should be before endTime")
-		}
+	if reqAddR.Time.IsZero() {
+		return errors.New("time is required")
 	}
-	if reqAddR.StartTime != nil && reqAddR.StartTime.After(time.Now()) {
-		return errors.New("cannot add future time to startTime")
-	}
-	if reqAddR.EndTime != nil && reqAddR.EndTime.After(time.Now()) {
-		return errors.New("cannot add future time to endTime")
+	if reqAddR.Time.Sub(time.Now()).Seconds() > 10 {
+		return errors.New("client time is not standard time")
 	}
 
 	// 2. 若公里数不为空时的检验
@@ -151,23 +146,23 @@ func (reqAddR *reqAddRecord) constructToRecord(driverID primitive.ObjectID) (*mo
 	if err := reqAddR.valid(); err != nil {
 		return nil, err
 	}
-	t := time.Now()
-	if reqAddR.StartTime != nil {
-		t = *reqAddR.StartTime
+	duration, err := time.ParseDuration(reqAddR.Duration)
+	if err != nil {
+		return nil, err
 	}
 	r := &model.Record{
 		ID:            primitive.NewObjectID(),
 		DriverID:      driverID,
 		Type:          reqAddR.Type,
-		StartTime:     t,
-		EndTime:       reqAddR.EndTime,
+		Time:          reqAddR.Time,
+		Duration:      duration,
 		StartLocation: reqAddR.StartLocation,
 		EndLocation:   reqAddR.EndLocation,
 		VehicleID:     reqAddR.VehicleID,
 		StartMileAge:  reqAddR.StartMileAge,
 		EndMileAge:    reqAddR.EndMileAge,
 		ClientTime:    reqAddR.ClientTime,
-		CreatedAt:     t,
+		CreatedAt:     time.Now(),
 	}
 	return r, nil
 }

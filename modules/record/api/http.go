@@ -133,4 +133,6 @@ func addNote(c echo.Context) error {
 }
 
 // offlineSyncRecords 离线返回在线状态后记录同步
+// 1. 对records按照时间排序，互相补充信息
+// 2. 取上一条数据，验证是否符合条件，补充信息，更新。
 func offlineSyncRecords(c echo.Context) {}

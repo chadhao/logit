@@ -38,7 +38,7 @@ func connect() (err error) {
 		context.Background(),
 		mongo.IndexModel{
 			Keys: bson.M{
-				"startTime": 1,
+				"time": 1,
 			},
 		},
 	); err != nil {
