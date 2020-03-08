@@ -7,6 +7,7 @@ go 1.13
 require (
 	github.com/DataDog/zstd v1.4.4 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
+	github.com/aws/aws-sdk-go v1.29.19
 	github.com/coreos/bbolt v1.3.3 // indirect
 	github.com/coreos/etcd v3.3.18+incompatible // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
@@ -39,7 +40,6 @@ require (
 	go.mongodb.org/mongo-driver v1.2.0
 	go.uber.org/zap v1.13.0 // indirect
 	golang.org/x/crypto v0.0.0-20191219195013-becbf705a915 // indirect
-	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553 // indirect
 	golang.org/x/sys v0.0.0-20191220220014-0732a990476f // indirect
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
