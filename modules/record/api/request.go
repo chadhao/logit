@@ -172,8 +172,7 @@ func (reqAddR *reqAddRecord) constructToRecord(driverID primitive.ObjectID) (*mo
 	if err := reqAddR.valid(); err != nil {
 		return nil, err
 	}
-	duration, err := time.ParseDuration(reqAddR.Duration)
-	if err != nil {
+	if _, err := time.ParseDuration(reqAddR.Duration); err != nil {
 		return nil, err
 	}
 	r := &model.Record{
@@ -181,7 +180,7 @@ func (reqAddR *reqAddRecord) constructToRecord(driverID primitive.ObjectID) (*mo
 		DriverID:      driverID,
 		Type:          reqAddR.Type,
 		Time:          reqAddR.Time,
-		Duration:      duration,
+		Duration:      reqAddR.Duration,
 		StartLocation: reqAddR.StartLocation,
 		EndLocation:   reqAddR.EndLocation,
 		VehicleID:     reqAddR.VehicleID,
@@ -198,8 +197,7 @@ func (reqAddR *reqAddRecord) constructToSyncRecord(driverID primitive.ObjectID) 
 	if err := reqAddR.syncValid(); err != nil {
 		return nil, err
 	}
-	duration, err := time.ParseDuration(reqAddR.Duration)
-	if err != nil {
+	if _, err := time.ParseDuration(reqAddR.Duration); err != nil {
 		return nil, err
 	}
 	r := &model.Record{
@@ -207,7 +205,7 @@ func (reqAddR *reqAddRecord) constructToSyncRecord(driverID primitive.ObjectID) 
 		DriverID:      driverID,
 		Type:          reqAddR.Type,
 		Time:          reqAddR.Time,
-		Duration:      duration,
+		Duration:      reqAddR.Duration,
 		StartLocation: reqAddR.StartLocation,
 		EndLocation:   reqAddR.EndLocation,
 		VehicleID:     reqAddR.VehicleID,
