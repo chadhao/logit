@@ -96,7 +96,7 @@ type Record struct {
 	DriverID      primitive.ObjectID `bson:"driverID" json:"driverID" valid:"required"`
 	Type          Type               `bson:"type" json:"type" valid:"required"`
 	Time          time.Time          `bson:"time" json:"time" valid:"required"`
-	Duration      string             `bson:"duration" json:"duration" valid:"required"`
+	Duration      time.Duration      `bson:"duration" json:"duration" valid:"required"`
 	StartLocation Location           `bson:"startLocation" json:"startLocation" valid:"required"`
 	EndLocation   Location           `bson:"endLocation," json:"endLocation" valid:"required"`
 	VehicleID     primitive.ObjectID `bson:"vehicleID" json:"vehicleID" valid:"required"`
@@ -156,8 +156,7 @@ func (r *Record) beforeAdd(lastRec *Record) error {
 		if r.StartMileAge != nil && !utils.AlmostEqual(*r.StartMileAge, *lastRec.EndMileAge) {
 			return errors.New("mileage not match")
 		}
-		duration, _ := time.ParseDuration(r.Duration)
-		if lastRec.Time.Add(duration).Sub(r.Time).Seconds() > 10 {
+		if lastRec.Time.Add(r.Duration).Sub(r.Time).Seconds() > 10 {
 			return errors.New("time and duration not match")
 		}
 	}
