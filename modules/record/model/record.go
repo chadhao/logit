@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"errors"
+	"math"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -156,7 +157,7 @@ func (r *Record) beforeAdd(lastRec *Record) error {
 		if r.StartMileAge != nil && !utils.AlmostEqual(*r.StartMileAge, *lastRec.EndMileAge) {
 			return errors.New("mileage not match")
 		}
-		if lastRec.Time.Add(r.Duration).Sub(r.Time).Seconds() > 10 {
+		if math.Abs(lastRec.Time.Add(r.Duration).Sub(r.Time).Seconds()) > 10 {
 			return errors.New("time and duration not match")
 		}
 	}

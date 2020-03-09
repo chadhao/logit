@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"math"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -130,7 +131,7 @@ func (reqAddR *reqAddRecord) valid() error {
 	if reqAddR.Time.IsZero() {
 		return errors.New("time is required")
 	}
-	if reqAddR.Time.Sub(time.Now()).Seconds() > 10 {
+	if math.Abs(reqAddR.Time.Sub(time.Now()).Seconds()) > 10 {
 		return errors.New("client time is not standard time")
 	}
 
