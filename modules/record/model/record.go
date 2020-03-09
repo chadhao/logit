@@ -111,7 +111,7 @@ type Record struct {
 // Add 记录添加
 func (r *Record) Add() (err error) {
 
-	lastRec, err := getLastestRecord(r.DriverID)
+	lastRec, err := GetLastestRecord(r.DriverID)
 	if err != nil && err != mongo.ErrNoDocuments {
 		return err
 	}
@@ -179,14 +179,15 @@ func (r *Record) valid() error {
 }
 
 func (r *Record) isLatestRecord() bool {
-	lastest, err := getLastestRecord(r.DriverID)
+	lastest, err := GetLastestRecord(r.DriverID)
 	if err != nil {
 		return false
 	}
 	return lastest.ID == r.ID
 }
 
-func getLastestRecord(driverID primitive.ObjectID) (*Record, error) {
+// GetLastestRecord 获取最近的一条记录
+func GetLastestRecord(driverID primitive.ObjectID) (*Record, error) {
 	lastRec := new(Record)
 	opts := options.FindOne().SetSort(bson.D{{Key: "time", Value: -1}})
 	err := recordCollection.FindOne(context.TODO(), bson.M{"driverID": driverID, "deletedAt": nil}, opts).Decode(lastRec)
@@ -226,7 +227,7 @@ type Records []Record
 // SyncAdd 批量上传添加
 func (rs Records) SyncAdd() (err error) {
 
-	lastRec, err := getLastestRecord(rs[0].DriverID)
+	lastRec, err := GetLastestRecord(rs[0].DriverID)
 	if err != nil && err != mongo.ErrNoDocuments {
 		return err
 	}
