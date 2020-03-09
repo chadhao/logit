@@ -5,24 +5,22 @@ import (
 	"fmt"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var (
-	mgoClient        *mongo.Client
-	db               *mongo.Database
-	recordCollection *mongo.Collection
-	noteCollection   *mongo.Collection
-	config           map[string]string
+	mgoClient     *mongo.Client
+	db            *mongo.Database
+	logCollection *mongo.Collection
+	config        map[string]string
 )
 
 func connect() (err error) {
-	uri := config["record.db.uri"]
-	username := config["record.db.username"]
-	password := config["record.db.password"]
-	database := config["record.db.database"]
+	uri := config["log.db.uri"]
+	username := config["log.db.username"]
+	password := config["log.db.password"]
+	database := config["log.db.database"]
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -32,18 +30,7 @@ func connect() (err error) {
 		return
 	}
 	db = mgoClient.Database(database)
-	recordCollection = db.Collection("record")
-	noteCollection = db.Collection("note")
-	if _, err = recordCollection.Indexes().CreateOne(
-		context.Background(),
-		mongo.IndexModel{
-			Keys: bson.M{
-				"time": 1,
-			},
-		},
-	); err != nil {
-		return
-	}
+	logCollection = db.Collection("log")
 	return
 }
 

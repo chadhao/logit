@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"sort"
 
 	"github.com/chadhao/logit/modules/record/model"
 	"github.com/chadhao/logit/modules/user/constant"
@@ -133,4 +134,41 @@ func addNote(c echo.Context) error {
 }
 
 // offlineSyncRecords 离线返回在线状态后记录同步
-func offlineSyncRecords(c echo.Context) {}
+// 1. 对records按照时间排序，检查相邻两条之间的时间位置是否准确
+// 2. 批量更新入数据库
+func offlineSyncRecords(c echo.Context) error {
+	roles := utils.RolesAssert(c.Get("roles"))
+	if !roles.Is(constant.ROLE_DRIVER) {
+		return errors.New("not driver")
+	}
+
+	uid, _ := c.Get("user").(primitive.ObjectID)
+
+	reqs := []reqAddRecord{}
+	if err := c.Bind(&reqs); err != nil {
+		return err
+	}
+	l := len(reqs)
+	if l == 0 {
+		return errors.New("no records obtained")
+	}
+
+	sort.Slice(reqs, func(a, b int) bool {
+		return reqs[a].Time.Before(reqs[b].Time)
+	})
+
+	records := model.Records{}
+	for i := 0; i < l; i++ {
+		r, err := reqs[i].constructToSyncRecord(uid)
+		if err != nil {
+			return err
+		}
+		records = append(records, *r)
+	}
+
+	if err := records.SyncAdd(); err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, records)
+
+}
