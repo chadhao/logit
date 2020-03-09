@@ -126,6 +126,20 @@ func DriverRegister(c echo.Context) error {
 	return c.JSON(http.StatusOK, token)
 }
 
+func GetVerification(c echo.Context) error {
+	vr := request.VerificationRequest{}
+
+	if err := c.Bind(&vr); err != nil {
+		return err
+	}
+
+	if err := vr.Send(); err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, "ok")
+}
+
 // func UserEntry(c echo.Context) error {
 // 	// Check user existance
 // 	// Create user if not existed

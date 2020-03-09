@@ -14,6 +14,8 @@ require (
 	github.com/coreos/go-systemd v0.0.0-00010101000000-000000000000 // indirect
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/go-redis/redis v6.15.7+incompatible // indirect
+	github.com/go-redis/redis/v7 v7.2.0
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/groupcache v0.0.0-20191027212112-611e8accdfc9 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
