@@ -37,6 +37,34 @@ func addRecord(c echo.Context) error {
 	return c.JSON(http.StatusOK, r)
 }
 
+// getLatestRecord 获取上一条记录
+func getLatestRecord(c echo.Context) error {
+
+	roles := utils.RolesAssert(c.Get("roles"))
+	if !roles.Is(constant.ROLE_DRIVER) {
+		return errors.New("not driver")
+	}
+
+	uid, _ := c.Get("user").(primitive.ObjectID)
+
+	r, err := model.GetLastestRecord(uid)
+	if err != nil {
+		return err
+	}
+
+	notesMap, err := model.GetNotesByRecordIDs([]primitive.ObjectID{r.ID})
+	if err != nil {
+		return err
+	}
+
+	respRecord := &respRecord{
+		Record: *r,
+		Notes:  notesMap[r.ID],
+	}
+
+	return c.JSON(http.StatusOK, respRecord)
+}
+
 // deleteLatestRecord 删除上一条记录
 func deleteLatestRecord(c echo.Context) error {
 

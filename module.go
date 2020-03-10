@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/chadhao/logit/config"
 	"github.com/chadhao/logit/modules/location"
+	"github.com/chadhao/logit/modules/message"
 	"github.com/chadhao/logit/modules/record"
 	"github.com/chadhao/logit/modules/suscription"
 	"github.com/chadhao/logit/modules/user"
@@ -13,9 +14,8 @@ type moduleInit func(router.Router, config.Config) error
 type moduleShutdown func()
 
 var modulesToBeLoaded = []moduleInit{
-	// message.InitModule,
+	message.InitModule,
 	user.InitModule,
-
 	record.InitModule,
 	location.InitModule,
 	suscription.InitModule,

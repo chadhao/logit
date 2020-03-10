@@ -1,17 +1,23 @@
 package request
 
 import (
+	"errors"
 	"time"
 
+	valid "github.com/asaskevich/govalidator"
 	"github.com/chadhao/logit/config"
+	msgApi "github.com/chadhao/logit/modules/message/api"
+	msgModel "github.com/chadhao/logit/modules/message/model"
+
 	"github.com/chadhao/logit/modules/user/model"
+	"github.com/chadhao/logit/utils"
 	"github.com/dgrijalva/jwt-go"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type (
 	RefreshTokenRequest struct {
-		Toekn string `json:"token"`
+		Token string `json:"token"`
 	}
 	LoginRequest struct {
 		Phone    string `json:"phone"`
@@ -21,6 +27,7 @@ type (
 	}
 	UserRegRequest struct {
 		Phone    string `json:"phone"`
+		Code     string `json:"code"`
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
@@ -41,6 +48,10 @@ type (
 		Email   string `json:"email"`
 		Licence string `json:"licence"`
 	}
+	VerificationRequest struct {
+		Phone string `json:"phone"`
+		Email string `json:"email"`
+	}
 )
 
 func (r *RefreshTokenRequest) Validate(c config.Config) (*model.User, error) {
@@ -50,7 +61,7 @@ func (r *RefreshTokenRequest) Validate(c config.Config) (*model.User, error) {
 	keyFunc := func(t *jwt.Token) (interface{}, error) {
 		return []byte(key), nil
 	}
-	token, err := jwt.Parse(r.Toekn, keyFunc)
+	token, err := jwt.Parse(r.Token, keyFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -94,6 +105,12 @@ func (r *LoginRequest) PasswordLogin() (*model.User, error) {
 
 func (r *UserRegRequest) Reg() (*model.User, error) {
 	// Should add Request content validation here
+
+	red := model.Redis{Key: r.Phone}
+	if code, err := red.Get(); err != nil || r.Code != code {
+		return nil, errors.New("verification code does not match")
+	}
+
 	u := model.User{
 		Phone:    r.Phone,
 		Email:    r.Email,
@@ -103,6 +120,8 @@ func (r *UserRegRequest) Reg() (*model.User, error) {
 	if err := u.Create(); err != nil {
 		return nil, err
 	}
+
+	red.Expire()
 
 	return &u, nil
 }
@@ -145,4 +164,54 @@ func (r *ExistanceRequest) Check() map[string]bool {
 		result["licemnce"] = d.Exists()
 	}
 	return result
+}
+
+func (r *VerificationRequest) Send() (err error) {
+	// 生成code,并保存至redis
+	var code, redisKey string
+
+	// 发送至电话或者邮箱
+	switch {
+	case valid.IsNumeric(r.Phone):
+		redisKey = r.Phone
+		if code, err = r.txtSent(); err != nil {
+			return err
+		}
+	case valid.IsEmail(r.Email):
+		redisKey = r.Email
+		if code, err = r.emailSent(); err != nil {
+			return err
+		}
+	default:
+		return errors.New("phone number or email is requried")
+	}
+
+	duration, _ := time.ParseDuration("5m")
+	red := model.Redis{
+		Key:            redisKey,
+		ExpireDuration: duration,
+	}
+	red.Set(code)
+
+	return nil
+}
+
+func (r *VerificationRequest) txtSent() (string, error) {
+	code := utils.GetRandomCode(6)
+	msg := "[Logit]Your verification code is: " + code
+	return code, msgApi.SendTxt(msgModel.Txt{Number: r.Phone, Message: msg})
+}
+
+func (r *VerificationRequest) emailSent() (string, error) {
+	code := utils.GetMD5Hash(r.Email)
+	email := msgModel.Email{
+		Sender:     "sender@logit.co.nz",
+		Recipients: []string{r.Email},
+		Subject:    "Logit Verification Email",
+		HTMLBody: "<h1>Logit Verification Email</h1><p>Please click " +
+			"<a href='https://logit.co.nz/email/verification" + code + "'>here</a>" +
+			"to active email.</p>",
+		CharSet: "UTF-8",
+	}
+	return code, msgApi.SendEmail(email)
 }

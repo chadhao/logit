@@ -7,7 +7,7 @@ import (
 )
 
 func InitModule(r router.Router, c config.Config) error {
-	if err := model.New(c.LoadModuleConfig("user.db")); err != nil {
+	if err := model.New(c.LoadModuleConfig("user")); err != nil {
 		return err
 	}
 
