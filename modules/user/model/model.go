@@ -8,13 +8,15 @@ import (
 
 type (
 	User struct {
-		Id       primitive.ObjectID `json:"id,omitempty" bson:"_id"`
-		Phone    string             `json:"phone,omitempty" bson:"phone"`
-		Email    string             `json:"email,omitempty" bson:"email"`
-		Password string             `json:"password,omitempty" bson:"password"`
-		Pin      string             `json:"pin,omitempty" bson:"pin"`
-		IsDriver bool               `json:"isDriver,omitempty" bson:"isDriver"`
-		RoleIds  []int              `json:"roleIds,omitempty" bson:"roleIds"`
+		Id              primitive.ObjectID `json:"id,omitempty" bson:"_id"`
+		Phone           string             `json:"phone,omitempty" bson:"phone"`
+		Email           string             `json:"email,omitempty" bson:"email"`
+		IsEmailVerified bool               `json:"isEmailVerified,omitempty" bson:"isEmailVerified"`
+		Password        string             `json:"password,omitempty" bson:"password"`
+		Pin             string             `json:"pin,omitempty" bson:"pin"`
+		IsDriver        bool               `json:"isDriver,omitempty" bson:"isDriver"`
+		RoleIds         []int              `json:"roleIds,omitempty" bson:"roleIds"`
+		CreatedAt       time.Time          `json:"createdAt" bson:"createdAt"`
 	}
 
 	Token struct {
@@ -33,6 +35,7 @@ type (
 		DateOfBirth          time.Time            `json:"dateOfBirth" bson:"dateOfBirth"`
 		Firstnames           string               `json:"firstnames" bson:"firstnames"`
 		Surname              string               `json:"surname" bson:"surname"`
+		CreatedAt            time.Time            `json:"createdAt" bson:"createdAt"`
 	}
 
 	Vehicle struct {
@@ -40,6 +43,7 @@ type (
 		DriverId     primitive.ObjectID `json:"driverId" bson:"driverId"`
 		Registration string             `json:"registration" bson:"registration"`
 		IsDiesel     bool               `json:"isDiesel" bson:"isDiesel"`
+		CreatedAt    time.Time          `json:"createdAt" bson:"createdAt"`
 	}
 
 	TransportOperator struct {
@@ -47,5 +51,6 @@ type (
 		UserIds       []primitive.ObjectID `json:"userIds" bson:"userIds"`
 		LicenceNumber string               `json:"licenceNumber" bson:"licenceNumber"`
 		Name          string               `json:"name" bson:"name"`
+		CreatedAt     time.Time            `json:"createdAt" bson:"createdAt"`
 	}
 )

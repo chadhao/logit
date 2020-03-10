@@ -7,7 +7,6 @@ import (
 	valid "github.com/asaskevich/govalidator"
 	"github.com/chadhao/logit/config"
 	msgApi "github.com/chadhao/logit/modules/message/api"
-	msgModel "github.com/chadhao/logit/modules/message/model"
 
 	"github.com/chadhao/logit/modules/user/model"
 	"github.com/chadhao/logit/utils"
@@ -112,9 +111,10 @@ func (r *UserRegRequest) Reg() (*model.User, error) {
 	}
 
 	u := model.User{
-		Phone:    r.Phone,
-		Email:    r.Email,
-		Password: r.Password,
+		Phone:     r.Phone,
+		Email:     r.Email,
+		Password:  r.Password,
+		CreatedAt: time.Now(),
 	}
 
 	if err := u.Create(); err != nil {
@@ -199,12 +199,12 @@ func (r *VerificationRequest) Send() (err error) {
 func (r *VerificationRequest) txtSent() (string, error) {
 	code := utils.GetRandomCode(6)
 	msg := "[Logit]Your verification code is: " + code
-	return code, msgApi.SendTxt(msgModel.Txt{Number: r.Phone, Message: msg})
+	return code, msgApi.SendTxt(msgApi.TxtRequest{Number: r.Phone, Message: msg})
 }
 
 func (r *VerificationRequest) emailSent() (string, error) {
 	code := utils.GetMD5Hash(r.Email)
-	email := msgModel.Email{
+	email := msgApi.EmailRequest{
 		Sender:     "sender@logit.co.nz",
 		Recipients: []string{r.Email},
 		Subject:    "Logit Verification Email",
