@@ -6,7 +6,7 @@ import (
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/chadhao/logit/config"
-	msgInternal "github.com/chadhao/logit/modules/message/internal"
+	msgApi "github.com/chadhao/logit/modules/message/api"
 	msgModel "github.com/chadhao/logit/modules/message/model"
 
 	"github.com/chadhao/logit/modules/user/model"
@@ -199,7 +199,7 @@ func (r *VerificationRequest) Send() (err error) {
 func (r *VerificationRequest) txtSent() (string, error) {
 	code := utils.GetRandomCode(6)
 	msg := "[Logit]Your verification code is: " + code
-	return code, msgInternal.SendTxt(msgModel.Txt{Number: r.Phone, Message: msg})
+	return code, msgApi.SendTxt(msgModel.Txt{Number: r.Phone, Message: msg})
 }
 
 func (r *VerificationRequest) emailSent() (string, error) {
@@ -213,5 +213,5 @@ func (r *VerificationRequest) emailSent() (string, error) {
 			"to active email.</p>",
 		CharSet: "UTF-8",
 	}
-	return code, msgInternal.SendEmail(email)
+	return code, msgApi.SendEmail(email)
 }
