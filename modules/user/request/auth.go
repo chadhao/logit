@@ -25,10 +25,10 @@ type (
 		Password string `json:"password"`
 	}
 	UserRegRequest struct {
-		Phone    string `json:"phone"`
-		Code     string `json:"code"`
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Phone    string `json:"phone" valid:"numeric,stringlength(8|11)"`
+		Code     string `json:"code" valid:"numeric"`
+		Email    string `json:"email" valid:"email"`
+		Password string `json:"password" valid:"stringlength(6|32)"`
 	}
 	DriverRegRequest struct {
 		Id            primitive.ObjectID `json:"id"`
@@ -103,7 +103,9 @@ func (r *LoginRequest) PasswordLogin() (*model.User, error) {
 }
 
 func (r *UserRegRequest) Reg() (*model.User, error) {
-	// Should add Request content validation here
+	if _, err := valid.ValidateStruct(r); err != nil {
+		return nil, err
+	}
 
 	red := model.Redis{Key: r.Phone}
 	if code, err := red.Get(); err != nil || r.Code != code {
