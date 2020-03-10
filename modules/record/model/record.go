@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"errors"
+	"math"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -13,6 +14,7 @@ import (
 	valid "github.com/asaskevich/govalidator"
 
 	locModel "github.com/chadhao/logit/modules/location/model"
+	"github.com/chadhao/logit/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -69,6 +71,10 @@ type Location struct {
 	Coors   locModel.Coors   `bson:"coors,omitempty" json:"coors,omitempty" valid:"-"`
 }
 
+func (l *Location) equal(o *Location) bool {
+	return l.Address == o.Address
+}
+
 // fillFull 若其中一项不完整，则用另外一项查找并补完
 func (l *Location) fillFull() (err error) {
 	if l.Address != "" && !l.Coors.EmptyCoors() {
@@ -90,10 +96,10 @@ type Record struct {
 	ID            primitive.ObjectID `bson:"_id" json:"id" valid:"-"`
 	DriverID      primitive.ObjectID `bson:"driverID" json:"driverID" valid:"required"`
 	Type          Type               `bson:"type" json:"type" valid:"required"`
-	StartTime     time.Time          `bson:"startTime" json:"startTime" valid:"required"`
-	EndTime       *time.Time         `bson:"endTime,omitempty" json:"endTime,omitempty" valid:"-"`
+	Time          time.Time          `bson:"time" json:"time" valid:"required"`
+	Duration      time.Duration      `bson:"duration" json:"duration" valid:"required"`
 	StartLocation Location           `bson:"startLocation" json:"startLocation" valid:"required"`
-	EndLocation   *Location          `bson:"endLocation,omitempty" json:"endLocation,omitempty" valid:"-"`
+	EndLocation   Location           `bson:"endLocation," json:"endLocation" valid:"required"`
 	VehicleID     primitive.ObjectID `bson:"vehicleID" json:"vehicleID" valid:"required"`
 	StartMileAge  *float64           `bson:"startDistance,omitempty" json:"startDistance,omitempty" valid:"-"`
 	EndMileAge    *float64           `bson:"endDistance,omitempty" json:"endDistance,omitempty" valid:"-"`
@@ -105,7 +111,7 @@ type Record struct {
 // Add 记录添加
 func (r *Record) Add() (err error) {
 
-	lastRec, err := getLastestRecord(r.DriverID)
+	lastRec, err := GetLastestRecord(r.DriverID)
 	if err != nil && err != mongo.ErrNoDocuments {
 		return err
 	}
@@ -118,7 +124,6 @@ func (r *Record) Add() (err error) {
 	if _, err = recordCollection.InsertOne(context.TODO(), r); err != nil {
 		return
 	}
-	go r.afterAdd(lastRec)
 	return
 }
 
@@ -139,38 +144,29 @@ func (r *Record) Delete() error {
 }
 
 func (r *Record) beforeAdd(lastRec *Record) error {
-	if lastRec != nil {
+	if (Record{}) != *lastRec {
 		if lastRec.Type == r.Type {
 			return errors.New("work type conflict with last record")
 		}
-		if lastRec.StartTime.After(r.StartTime) {
-			return errors.New("start time conflict with last record")
+		if lastRec.Time.After(r.Time) {
+			return errors.New("time conflict with last record")
+		}
+		if !r.StartLocation.equal(&lastRec.EndLocation) {
+			return errors.New("location not match")
+		}
+		if r.StartMileAge != nil && !utils.AlmostEqual(*r.StartMileAge, *lastRec.EndMileAge) {
+			return errors.New("mileage not match")
+		}
+		if math.Abs(lastRec.Time.Add(r.Duration).Sub(r.Time).Seconds()) > 10 {
+			return errors.New("time and duration not match")
 		}
 	}
-	if err := r.StartLocation.fillFull(); err != nil {
+
+	if err := r.EndLocation.fillFull(); err != nil {
 		return err
 	}
+
 	return r.valid()
-}
-
-func (r *Record) afterAdd(lastRec *Record) error {
-	// 1. 获取上一条记录，将上一条记录信息补充完整; endTime, endLocation不为空时候添加
-	// 2. 若此条和上一条的startMileAge都不为空，上一条endMileAge不为空，则为上一条添加endMileAge
-	if lastRec == nil {
-		return nil
-	}
-	update := bson.M{
-		"endTime":     r.StartTime,
-		"endLocation": r.StartLocation,
-	}
-	if r.StartMileAge != nil && lastRec.StartMileAge != nil {
-		update["endMileAge"] = r.StartMileAge
-	}
-	if _, err := recordCollection.UpdateOne(context.TODO(), bson.M{"_id": lastRec.ID}, bson.M{"$set": update}); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (r *Record) valid() error {
@@ -183,16 +179,17 @@ func (r *Record) valid() error {
 }
 
 func (r *Record) isLatestRecord() bool {
-	lastest, err := getLastestRecord(r.DriverID)
+	lastest, err := GetLastestRecord(r.DriverID)
 	if err != nil {
 		return false
 	}
 	return lastest.ID == r.ID
 }
 
-func getLastestRecord(driverID primitive.ObjectID) (*Record, error) {
+// GetLastestRecord 获取最近的一条记录
+func GetLastestRecord(driverID primitive.ObjectID) (*Record, error) {
 	lastRec := new(Record)
-	opts := options.FindOne().SetSort(bson.D{{Key: "_id", Value: -1}})
+	opts := options.FindOne().SetSort(bson.D{{Key: "time", Value: -1}})
 	err := recordCollection.FindOne(context.TODO(), bson.M{"driverID": driverID, "deletedAt": nil}, opts).Decode(lastRec)
 	return lastRec, err
 }
@@ -208,12 +205,8 @@ func GetRecord(id primitive.ObjectID) (*Record, error) {
 func GetRecords(driverID primitive.ObjectID, from, to time.Time, getDeleted bool) ([]Record, error) {
 	records := []Record{}
 	filter := bson.M{
-		"driverID":  driverID,
-		"startTime": bson.M{"$gte": from},
-		"$or": []bson.M{
-			bson.M{"endTime": bson.M{"$lte": to}},
-			bson.M{"startTime": bson.M{"$lte": to}, "endTime": nil},
-		},
+		"driverID": driverID,
+		"time":     bson.M{"$gte": from, "$lte": to},
 	}
 	if !getDeleted {
 		filter["deletedAt"] = nil
@@ -226,4 +219,33 @@ func GetRecords(driverID primitive.ObjectID, from, to time.Time, getDeleted bool
 		return nil, err
 	}
 	return records, nil
+}
+
+// Records .
+type Records []Record
+
+// SyncAdd 批量上传添加
+func (rs Records) SyncAdd() (err error) {
+
+	lastRec, err := GetLastestRecord(rs[0].DriverID)
+	if err != nil && err != mongo.ErrNoDocuments {
+		return err
+	}
+	l := len(rs)
+	for i := 0; i < l; i++ {
+		if err = rs[i].beforeAdd(lastRec); err != nil {
+			return
+		}
+		lastRec = &rs[i]
+	}
+
+	// 数据库添加记录
+	rsI := make([]interface{}, l)
+	for i := range rs {
+		rsI[i] = rs[i]
+	}
+	if _, err = recordCollection.InsertMany(context.TODO(), rsI); err != nil {
+		return
+	}
+	return
 }

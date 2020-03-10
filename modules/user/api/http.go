@@ -1,32 +1,59 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/chadhao/logit/config"
 	"github.com/chadhao/logit/modules/user/constant"
+	"github.com/chadhao/logit/modules/user/model"
 	"github.com/chadhao/logit/modules/user/request"
+	"github.com/chadhao/logit/utils"
 	"github.com/labstack/echo/v4"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func CheckExistance(c echo.Context) error {
-	e := request.ExistanceRequest{}
+	r := request.ExistanceRequest{}
 
-	if err := c.Bind(&e); err != nil {
+	if err := c.Bind(&r); err != nil {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, e.Check())
+	return c.JSON(http.StatusOK, r.Check())
+}
+
+func RefreshToken(c echo.Context) error {
+	r := request.RefreshTokenRequest{}
+
+	if err := c.Bind(&r); err != nil {
+		return err
+	}
+
+	config := c.Get("config").(config.Config)
+	user, err := r.Validate(config)
+	if err != nil {
+		return err
+	}
+	if err := user.Find(); err != nil {
+		return err
+	}
+	token, err := user.IssueToken(config)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, token)
 }
 
 func PasswordLogin(c echo.Context) error {
-	l := request.LoginRequest{}
+	r := request.LoginRequest{}
 
-	if err := c.Bind(&l); err != nil {
+	if err := c.Bind(&r); err != nil {
 		return err
 	}
 
-	user, err := l.PasswordLogin()
+	user, err := r.PasswordLogin()
 	if err != nil {
 		return err
 	}
@@ -39,25 +66,46 @@ func PasswordLogin(c echo.Context) error {
 	return c.JSON(http.StatusOK, token)
 }
 
-func DriverRegister(c echo.Context) error {
-	ur := request.UserRegistrationRequest{}
-	dr := request.DriverRegistrationRequest{}
+func UserRegister(c echo.Context) error {
+	ur := request.UserRegRequest{}
 
 	if err := c.Bind(&ur); err != nil {
 		return err
 	}
-	if err := c.Bind(&dr); err != nil {
-		return err
-	}
 
-	// Register user
 	user, err := ur.Reg()
 	if err != nil {
 		return err
 	}
 
-	// Register driver
-	dr.Id = user.Id
+	// Issue token
+	token, err := user.IssueToken(c.Get("config").(config.Config))
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, token)
+}
+
+func DriverRegister(c echo.Context) error {
+	dr := request.DriverRegRequest{}
+
+	if err := c.Bind(&dr); err != nil {
+		return err
+	}
+
+	uid, _ := c.Get("user").(primitive.ObjectID)
+	roles := utils.RolesAssert(c.Get("roles"))
+	if roles.Is(constant.ROLE_DRIVER) {
+		return errors.New("is driver already")
+	}
+	user := &model.User{Id: uid}
+	if err := user.Find(); err != nil {
+		return errors.New("cannot find user")
+	}
+
+	// Assign driver identity
+	dr.Id = uid
 	if _, err := dr.Reg(); err != nil {
 		return err
 	}
@@ -76,6 +124,20 @@ func DriverRegister(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, token)
+}
+
+func GetVerification(c echo.Context) error {
+	vr := request.VerificationRequest{}
+
+	if err := c.Bind(&vr); err != nil {
+		return err
+	}
+
+	if err := vr.Send(); err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, "ok")
 }
 
 // func UserEntry(c echo.Context) error {

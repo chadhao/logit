@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
 	jwt_go "github.com/dgrijalva/jwt-go"
 	"github.com/labstack/echo/v4"
@@ -184,10 +185,10 @@ func JWTWithConfig(config JWTConfig) echo.MiddlewareFunc {
 				claims := reflect.New(t).Interface().(jwt_go.Claims)
 				token, err = jwt_go.ParseWithClaims(auth, claims, config.keyFunc)
 			}
+			claims := token.Claims.(*logitClaims)
 			if err == nil && token.Valid {
 				// Store user information from token into context.
 				c.Set(config.ContextKey, token)
-				claims := token.Claims.(*logitClaims)
 				userId, _ := primitive.ObjectIDFromHex(claims.Subject)
 				c.Set("user", userId)
 				c.Set("roles", claims.Roles)
@@ -202,9 +203,16 @@ func JWTWithConfig(config JWTConfig) echo.MiddlewareFunc {
 			if config.ErrorHandlerWithContext != nil {
 				return config.ErrorHandlerWithContext(err, c)
 			}
+			if claims.VerifyExpiresAt(time.Now().Unix(), false) == false {
+				return &echo.HTTPError{
+					Code:     http.StatusUnauthorized,
+					Message:  "expired",
+					Internal: err,
+				}
+			}
 			return &echo.HTTPError{
 				Code:     http.StatusUnauthorized,
-				Message:  "invalid or expired jwt",
+				Message:  "invalid",
 				Internal: err,
 			}
 		}

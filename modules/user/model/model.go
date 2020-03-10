@@ -1,25 +1,10 @@
 package model
 
 import (
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
-
-// type (
-// 	UserQueryType   int
-// 	DriverQueryType int
-// )
-
-// const (
-// 	USER_QUERY_BY_ID      UserQueryType = 0
-// 	USER_QUERY_BY_PHONE   UserQueryType = 1
-// 	USER_QUERY_BY_EMAIL   UserQueryType = 2
-// 	USER_QUERY_BY_LICENCE UserQueryType = 3
-
-// 	DRIVER_QUERY_BY_ID      DriverQueryType = 0
-// 	DRIVER_QUERY_BY_LICENCE DriverQueryType = 1
-// 	DRIVER_QUERY_BY_USER_ID DriverQueryType = 2
-// )
 
 type (
 	User struct {
@@ -48,6 +33,13 @@ type (
 		DateOfBirth          time.Time            `json:"dateOfBirth" bson:"dateOfBirth"`
 		Firstnames           string               `json:"firstnames" bson:"firstnames"`
 		Surname              string               `json:"surname" bson:"surname"`
+	}
+
+	Vehicle struct {
+		Id           primitive.ObjectID `json:"id" bson:"_id"`
+		DriverId     primitive.ObjectID `json:"driverId" bson:"driverId"`
+		Registration string             `json:"registration" bson:"registration"`
+		IsDiesel     bool               `json:"isDiesel" bson:"isDiesel"`
 	}
 
 	TransportOperator struct {

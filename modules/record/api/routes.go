@@ -16,6 +16,12 @@ func LoadRoutes(r router.Router) {
 		Roles:   []int{constant.ROLE_DRIVER},
 	})
 	r.Add(&router.Route{
+		Path:    "/records/sync",
+		Method:  http.MethodPost,
+		Handler: offlineSyncRecords,
+		Roles:   []int{constant.ROLE_DRIVER},
+	})
+	r.Add(&router.Route{
 		Path:    "/record/:id",
 		Method:  http.MethodDelete,
 		Handler: deleteLatestRecord,

@@ -3,19 +3,27 @@ package model
 import (
 	"context"
 	"fmt"
+
+	"github.com/go-redis/redis/v7"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var config map[string]string
-var mongoClient *mongo.Client
-var db *mongo.Database
+var (
+	config      map[string]string
+	mongoClient *mongo.Client
+	redisClient *redis.Client
+	db          *mongo.Database
+)
 
 func connect() error {
 	uri := config["user.db.uri"]
 	username := config["user.db.username"]
 	password := config["user.db.password"]
 	database := config["user.db.database"]
+
+	redisAddr := config["user.redis.address"]
+	redisPass := config["user.redis.password"]
 
 	var err error
 	ctx, cancel := context.WithCancel(context.Background())
@@ -28,6 +36,11 @@ func connect() error {
 	}
 
 	db = mongoClient.Database(database)
+	redisClient = redis.NewClient(&redis.Options{
+		Addr:     redisAddr,
+		Password: redisPass,
+		DB:       0,
+	})
 
 	return nil
 }
