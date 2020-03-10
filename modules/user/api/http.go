@@ -8,6 +8,7 @@ import (
 	"github.com/chadhao/logit/modules/user/constant"
 	"github.com/chadhao/logit/modules/user/model"
 	"github.com/chadhao/logit/modules/user/request"
+	"github.com/chadhao/logit/modules/user/response"
 	"github.com/chadhao/logit/utils"
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -66,6 +67,36 @@ func PasswordLogin(c echo.Context) error {
 	return c.JSON(http.StatusOK, token)
 }
 
+func GetUserInfo(c echo.Context) error {
+	uid, _ := c.Get("user").(primitive.ObjectID)
+
+	var (
+		user   = &model.User{Id: uid}
+		driver = &model.Driver{}
+		tos    = []*model.TransportOperator{}
+	)
+
+	if err := user.Find(); err != nil {
+		return err
+	}
+
+	roles := utils.RolesAssert(user.RoleIds)
+	if roles.Is(constant.ROLE_DRIVER) {
+		driver.Id = uid
+		driver.Find()
+	}
+	if roles.Is(constant.ROLE_TO_SUPER) {
+		to := &model.TransportOperator{Id: uid}
+		to.Find()
+		tos = append(tos, to)
+	}
+
+	resp := response.UserInfoResponse{}
+	resp.Format(user, driver, tos)
+
+	return c.JSON(http.StatusOK, resp)
+}
+
 func UserRegister(c echo.Context) error {
 	ur := request.UserRegRequest{}
 
@@ -85,6 +116,20 @@ func UserRegister(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, token)
+}
+
+func EmailVerify(c echo.Context) error {
+	er := request.EmailVerifyRequest{}
+
+	if err := c.Bind(&er); err != nil {
+		return err
+	}
+
+	if err := er.Verify(); err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, "ok")
 }
 
 func DriverRegister(c echo.Context) error {
@@ -112,7 +157,45 @@ func DriverRegister(c echo.Context) error {
 
 	// Update user role and isDriver
 	user.IsDriver = true
-	user.RoleIds = []int{constant.ROLE_DRIVER}
+	user.RoleIds = append(user.RoleIds, constant.ROLE_DRIVER)
+	if err := user.Update(); err != nil {
+		return err
+	}
+
+	// Issue token
+	token, err := user.IssueToken(c.Get("config").(config.Config))
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, token)
+}
+
+func TransportOperatorRegister(c echo.Context) error {
+	tr := request.TransportOperatorRegRequest{}
+
+	if err := c.Bind(&tr); err != nil {
+		return err
+	}
+
+	uid, _ := c.Get("user").(primitive.ObjectID)
+	roles := utils.RolesAssert(c.Get("roles"))
+	if roles.Is(constant.ROLE_TO_SUPER) {
+		return errors.New("is transport operator super admin already")
+	}
+	user := &model.User{Id: uid}
+	if err := user.Find(); err != nil {
+		return errors.New("cannot find user")
+	}
+
+	// Assign transport operator super identity
+	tr.Id = uid
+	if _, err := tr.Reg(); err != nil {
+		return err
+	}
+
+	// Update user role
+	user.RoleIds = append(user.RoleIds, constant.ROLE_TO_SUPER)
 	if err := user.Update(); err != nil {
 		return err
 	}
@@ -134,6 +217,53 @@ func GetVerification(c echo.Context) error {
 	}
 
 	if err := vr.Send(); err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, "ok")
+}
+
+func UserUpdate(c echo.Context) error {
+	ur := request.UserUpdateRequest{}
+
+	if err := c.Bind(&ur); err != nil {
+		return err
+	}
+	uid, _ := c.Get("user").(primitive.ObjectID)
+	user := &model.User{Id: uid}
+	if err := user.Find(); err != nil {
+		return err
+	}
+
+	if err := ur.Replace(user); err != nil {
+		return err
+	}
+
+	if err := user.Update(); err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, "ok")
+}
+
+func ForgetPassword(c echo.Context) error {
+	vr := request.ForgetPasswordRequest{}
+
+	if err := c.Bind(&vr); err != nil {
+		return err
+	}
+
+	user := model.User{Phone: vr.Phone, Email: vr.Email}
+	if err := user.Find(); err != nil {
+		return err
+	}
+
+	if err := vr.Verify(); err != nil {
+		return err
+	}
+
+	user.Password = vr.Password
+	if err := user.Update(); err != nil {
 		return err
 	}
 

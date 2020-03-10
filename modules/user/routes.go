@@ -31,6 +31,31 @@ func loadRoutes(r router.Router) {
 	r.Add(&router.Route{
 		Path:    "/user",
 		Method:  http.MethodPost,
+		Handler: api.UserRegister,
+	})
+	r.Add(&router.Route{
+		Path:    "/user",
+		Method:  http.MethodGet,
+		Handler: api.GetUserInfo,
+	})
+	r.Add(&router.Route{
+		Path:    "/user",
+		Method:  http.MethodPut,
+		Handler: api.UserUpdate,
+	})
+	r.Add(&router.Route{
+		Path:    "/user/driver",
+		Method:  http.MethodPost,
 		Handler: api.DriverRegister,
+	})
+	r.Add(&router.Route{
+		Path:    "/email/verification",
+		Method:  http.MethodPost,
+		Handler: api.EmailVerify,
+	})
+	r.Add(&router.Route{
+		Path:    "/user/forgot",
+		Method:  http.MethodPost,
+		Handler: api.ForgetPassword,
 	})
 }

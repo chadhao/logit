@@ -30,6 +30,9 @@ type (
 		Email    string `json:"email" valid:"email"`
 		Password string `json:"password" valid:"stringlength(6|32)"`
 	}
+	UserUpdateRequest struct {
+		Password string `json:"password" valid:"stringlength(6|32)"`
+	}
 	DriverRegRequest struct {
 		Id            primitive.ObjectID `json:"id"`
 		LicenceNumber string             `json:"licenceNumber"`
@@ -50,6 +53,16 @@ type (
 	VerificationRequest struct {
 		Phone string `json:"phone"`
 		Email string `json:"email"`
+	}
+	EmailVerifyRequest struct {
+		Email string `query:"email" valid:"email"`
+		Token string `query:"token" valid:"required"`
+	}
+	ForgetPasswordRequest struct {
+		Phone    string `json:"phone" valid:"numeric,stringlength(8|11),optional"`
+		Email    string `json:"email" valid:"email,optional"`
+		Token    string `json:"token" valid:"required"`
+		Password string `json:"password" valid:"stringlength(6|32)"`
 	}
 )
 
@@ -128,6 +141,34 @@ func (r *UserRegRequest) Reg() (*model.User, error) {
 	return &u, nil
 }
 
+func (e *EmailVerifyRequest) Verify() error {
+	if _, err := valid.ValidateStruct(e); err != nil {
+		return err
+	}
+
+	red := model.Redis{Key: e.Email}
+	if token, err := red.Get(); err != nil || e.Token != token {
+		return errors.New("token does not match")
+	}
+
+	u := model.User{
+		Email: e.Email,
+	}
+
+	if err := u.Find(); err != nil {
+		return err
+	}
+
+	u.IsEmailVerified = true
+	if err := u.Update(); err != nil {
+		return err
+	}
+
+	red.Expire()
+
+	return nil
+}
+
 func (r *DriverRegRequest) Reg() (*model.Driver, error) {
 	// Should add Request content validation here
 	d := model.Driver{
@@ -136,6 +177,23 @@ func (r *DriverRegRequest) Reg() (*model.Driver, error) {
 		DateOfBirth:   r.DateOfBirth,
 		Firstnames:    r.Firstnames,
 		Surname:       r.Surname,
+		CreatedAt:     time.Now(),
+	}
+
+	if err := d.Create(); err != nil {
+		return nil, err
+	}
+
+	return &d, nil
+}
+
+func (r *TransportOperatorRegRequest) Reg() (*model.TransportOperator, error) {
+	// Should add Request content validation here
+	d := model.TransportOperator{
+		Id:            r.Id,
+		LicenceNumber: r.LicenceNumber,
+		Name:          r.Name,
+		CreatedAt:     time.Now(),
 	}
 
 	if err := d.Create(); err != nil {
@@ -211,9 +269,38 @@ func (r *VerificationRequest) emailSent() (string, error) {
 		Recipients: []string{r.Email},
 		Subject:    "Logit Verification Email",
 		HTMLBody: "<h1>Logit Verification Email</h1><p>Please click " +
-			"<a href='https://logit.co.nz/email/verification" + code + "'>here</a>" +
+			"<a href='http://dev.logit.co.nz/email/verification?email=" + r.Email + "?token=" + code + "'>here</a>" +
 			"to active email.</p>",
 		CharSet: "UTF-8",
 	}
 	return code, msgApi.SendEmail(email)
+}
+
+func (r *ForgetPasswordRequest) Verify() (err error) {
+	if _, err := valid.ValidateStruct(r); err != nil {
+		return err
+	}
+	var redisKey string
+	if len(r.Phone) > 0 {
+		redisKey = r.Phone
+	} else if len(r.Email) > 0 {
+		redisKey = r.Email
+	} else {
+		return errors.New("phone number or email is required")
+	}
+	red := model.Redis{Key: redisKey}
+	if token, err := red.Get(); err != nil || r.Token != token {
+		return errors.New("token does not match")
+	}
+
+	red.Expire()
+	return nil
+}
+
+func (r *UserUpdateRequest) Replace(user *model.User) (err error) {
+	if _, err := valid.ValidateStruct(r); err != nil {
+		return err
+	}
+	user.Password = r.Password
+	return nil
 }
