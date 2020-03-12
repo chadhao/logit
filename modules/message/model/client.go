@@ -9,23 +9,30 @@ import (
 )
 
 var (
-	awsSession *session.Session
-	awsSNS     *sns.SNS
-	awsSES     *ses.SES
-	config     map[string]string
+	awsSNSSession *session.Session
+	awsSESSession *session.Session
+	awsSNS        *sns.SNS
+	awsSES        *ses.SES
+	config        map[string]string
 )
 
 func awsInit() (err error) {
-	awsAccessKeyID := config["message.aws.accesskeyid"]
-	awsSecrectAccessKey := config["message.aws.secrectaccesskey"]
+	awsSNSAccessKeyID := config["message.aws.snsaccesskeyid"]
+	awsSNSSecrectAccessKey := config["message.aws.snssecrectaccesskey"]
+	awsSESAccessKeyID := config["message.aws.sesaccesskeyid"]
+	awsSESSecrectAccessKey := config["message.aws.sessecrectaccesskey"]
 	awsRegion := config["message.aws.region"]
 
-	awsSession, err = session.NewSession(&aws.Config{
+	awsSNSSession, err = session.NewSession(&aws.Config{
 		Region:      aws.String(awsRegion),
-		Credentials: credentials.NewStaticCredentials(awsAccessKeyID, awsSecrectAccessKey, ""),
+		Credentials: credentials.NewStaticCredentials(awsSNSAccessKeyID, awsSNSSecrectAccessKey, ""),
 	})
-	awsSNS = sns.New(awsSession)
-	awsSES = ses.New(awsSession)
+	awsSESSession, err = session.NewSession(&aws.Config{
+		Region:      aws.String(awsRegion),
+		Credentials: credentials.NewStaticCredentials(awsSESAccessKeyID, awsSESSecrectAccessKey, ""),
+	})
+	awsSNS = sns.New(awsSNSSession)
+	awsSES = ses.New(awsSESSession)
 	return
 }
 
