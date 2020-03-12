@@ -8,6 +8,7 @@ import (
 	"github.com/chadhao/logit/config"
 	msgApi "github.com/chadhao/logit/modules/message/api"
 
+	"github.com/chadhao/logit/modules/user/constant"
 	"github.com/chadhao/logit/modules/user/model"
 	"github.com/chadhao/logit/utils"
 	"github.com/dgrijalva/jwt-go"
@@ -265,7 +266,7 @@ func (r *VerificationRequest) txtSent() (string, error) {
 func (r *VerificationRequest) emailSent() (string, error) {
 	code := utils.GetMD5Hash(r.Email)
 	email := msgApi.EmailRequest{
-		Sender:     "sender@logit.co.nz",
+		Sender:     constant.EMAIL_SENDER,
 		Recipients: []string{r.Email},
 		Subject:    "Logit Verification Email",
 		HTMLBody: "<h1>Logit Verification Email</h1><p>Please click " +
