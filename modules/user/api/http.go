@@ -270,6 +270,81 @@ func ForgetPassword(c echo.Context) error {
 	return c.JSON(http.StatusOK, "ok")
 }
 
+func VehicleCreate(c echo.Context) error {
+	vr := request.VehicleCreateRequest{}
+
+	if err := c.Bind(&vr); err != nil {
+		return err
+	}
+
+	uid, _ := c.Get("user").(primitive.ObjectID)
+	roles := utils.RolesAssert(c.Get("roles"))
+	if !roles.Is(constant.ROLE_DRIVER) {
+		return errors.New("is not driver")
+	}
+
+	vr.DriverId = uid
+	vehicle, err := vr.Create()
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, vehicle)
+}
+
+func VehicleDelete(c echo.Context) error {
+
+	vr := struct {
+		Id primitive.ObjectID `json:"id"`
+	}{}
+	if err := c.Bind(&vr); err != nil {
+		return err
+	}
+
+	uid, _ := c.Get("user").(primitive.ObjectID)
+
+	vehicle := &model.Vehicle{
+		Id: vr.Id,
+	}
+	if err := vehicle.Find(); err != nil {
+		return err
+	}
+	if vehicle.DriverId != uid {
+		return errors.New("no authorization")
+	}
+
+	if err := vehicle.Delete(); err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, "deleted")
+}
+
+func GetVehicles(c echo.Context) error {
+
+	vr := struct {
+		DriverId primitive.ObjectID `json:"driverId" query:"driverId"`
+	}{}
+	if err := c.Bind(&vr); err != nil {
+		return err
+	}
+
+	uid, _ := c.Get("user").(primitive.ObjectID)
+	if uid != vr.DriverId {
+		return errors.New("no authorization")
+	}
+
+	vehicle := &model.Vehicle{
+		DriverId: vr.DriverId,
+	}
+	vehicles, err := vehicle.FindByDriverId()
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, vehicles)
+}
+
 // func UserEntry(c echo.Context) error {
 // 	// Check user existance
 // 	// Create user if not existed

@@ -63,4 +63,19 @@ func loadRoutes(r router.Router) {
 		Method:  http.MethodPost,
 		Handler: api.ForgetPassword,
 	})
+	r.Add(&router.Route{
+		Path:    "/user/vehicle",
+		Method:  http.MethodPost,
+		Handler: api.VehicleCreate,
+	})
+	r.Add(&router.Route{
+		Path:    "/user/vehicle",
+		Method:  http.MethodDelete,
+		Handler: api.VehicleDelete,
+	})
+	r.Add(&router.Route{
+		Path:    "/user/vehicles",
+		Method:  http.MethodGet,
+		Handler: api.GetVehicles,
+	})
 }

@@ -25,27 +25,6 @@ type (
 		Licence  string `json:"licence"`
 		Password string `json:"password"`
 	}
-	UserRegRequest struct {
-		Phone    string `json:"phone" valid:"numeric,stringlength(8|11)"`
-		Code     string `json:"code" valid:"numeric"`
-		Email    string `json:"email" valid:"email"`
-		Password string `json:"password" valid:"stringlength(6|32)"`
-	}
-	UserUpdateRequest struct {
-		Password string `json:"password" valid:"stringlength(6|32)"`
-	}
-	DriverRegRequest struct {
-		Id            primitive.ObjectID `json:"id"`
-		LicenceNumber string             `json:"licenceNumber"`
-		DateOfBirth   time.Time          `json:"dateOfBirth"`
-		Firstnames    string             `json:"firstnames"`
-		Surname       string             `json:"surname"`
-	}
-	TransportOperatorRegRequest struct {
-		Id            primitive.ObjectID `json:"id"`
-		LicenceNumber string             `json:"licenceNumber"`
-		Name          string             `json:"name"`
-	}
 	ExistanceRequest struct {
 		Phone   string `json:"phone"`
 		Email   string `json:"email"`
@@ -116,32 +95,6 @@ func (r *LoginRequest) PasswordLogin() (*model.User, error) {
 	return &u, nil
 }
 
-func (r *UserRegRequest) Reg() (*model.User, error) {
-	if _, err := valid.ValidateStruct(r); err != nil {
-		return nil, err
-	}
-
-	red := model.Redis{Key: r.Phone}
-	if code, err := red.Get(); err != nil || r.Code != code {
-		return nil, errors.New("verification code does not match")
-	}
-
-	u := model.User{
-		Phone:     r.Phone,
-		Email:     r.Email,
-		Password:  r.Password,
-		CreatedAt: time.Now(),
-	}
-
-	if err := u.Create(); err != nil {
-		return nil, err
-	}
-
-	red.Expire()
-
-	return &u, nil
-}
-
 func (e *EmailVerifyRequest) Verify() error {
 	if _, err := valid.ValidateStruct(e); err != nil {
 		return err
@@ -168,40 +121,6 @@ func (e *EmailVerifyRequest) Verify() error {
 	red.Expire()
 
 	return nil
-}
-
-func (r *DriverRegRequest) Reg() (*model.Driver, error) {
-	// Should add Request content validation here
-	d := model.Driver{
-		Id:            r.Id,
-		LicenceNumber: r.LicenceNumber,
-		DateOfBirth:   r.DateOfBirth,
-		Firstnames:    r.Firstnames,
-		Surname:       r.Surname,
-		CreatedAt:     time.Now(),
-	}
-
-	if err := d.Create(); err != nil {
-		return nil, err
-	}
-
-	return &d, nil
-}
-
-func (r *TransportOperatorRegRequest) Reg() (*model.TransportOperator, error) {
-	// Should add Request content validation here
-	d := model.TransportOperator{
-		Id:            r.Id,
-		LicenceNumber: r.LicenceNumber,
-		Name:          r.Name,
-		CreatedAt:     time.Now(),
-	}
-
-	if err := d.Create(); err != nil {
-		return nil, err
-	}
-
-	return &d, nil
 }
 
 func (r *ExistanceRequest) Check() map[string]bool {
@@ -295,13 +214,5 @@ func (r *ForgetPasswordRequest) Verify() (err error) {
 	}
 
 	red.Expire()
-	return nil
-}
-
-func (r *UserUpdateRequest) Replace(user *model.User) (err error) {
-	if _, err := valid.ValidateStruct(r); err != nil {
-		return err
-	}
-	user.Password = r.Password
 	return nil
 }
