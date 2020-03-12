@@ -49,6 +49,11 @@ func loadRoutes(r router.Router) {
 		Handler: api.DriverRegister,
 	})
 	r.Add(&router.Route{
+		Path:    "/user/code",
+		Method:  http.MethodPost,
+		Handler: api.GetVerification,
+	})
+	r.Add(&router.Route{
 		Path:    "/email/verification",
 		Method:  http.MethodPost,
 		Handler: api.EmailVerify,
