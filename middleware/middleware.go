@@ -5,6 +5,7 @@ import (
 
 	"github.com/chadhao/logit/config"
 	"github.com/chadhao/logit/middleware/jwt"
+	"github.com/chadhao/logit/modules/user/constant"
 	"github.com/chadhao/logit/router"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -36,15 +37,11 @@ func LoadAfterRouter(e *echo.Echo, c config.Config) {
 	e.Use(jwt.JWTWithConfig(jwt.JWTConfig{
 		Skipper: func(e echo.Context) bool {
 			r := e.Get("router").(router.Router)
-			if _, err := r.Match(e.Request().Method, e.Path()); err != nil {
+			route, err := r.Match(e.Request().Method, e.Path())
+			if err != nil {
 				return true
 			}
-			return false
-			// route, err := r.Match(e.Request().Method, e.Path())
-			// if err != nil {
-			// 	return true
-			// }
-			// return len(route.Roles) == 0
+			return len(route.Roles) == 0
 		},
 		SigningKey: []byte(jwtAccessSigningKey),
 	}))
@@ -64,6 +61,10 @@ func LoadAfterRouter(e *echo.Echo, c config.Config) {
 
 			userRoles := e.Get("roles").([]int)
 			if hasIntersectionInt(route.Roles, userRoles) {
+				return next(e)
+			}
+			// 用户身份仅为user时候也pass
+			if len(route.Roles) > 0 && route.Roles[0] == constant.ROLE_USER_DEFAULT {
 				return next(e)
 			}
 
