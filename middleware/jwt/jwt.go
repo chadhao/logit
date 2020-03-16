@@ -189,6 +189,7 @@ func JWTWithConfig(config JWTConfig) echo.MiddlewareFunc {
 			if err == nil && token.Valid {
 				// Store user information from token into context.
 				c.Set(config.ContextKey, token)
+
 				userId, _ := primitive.ObjectIDFromHex(claims.Subject)
 				c.Set("user", userId)
 				c.Set("roles", claims.Roles)

@@ -83,6 +83,7 @@ func (u *User) Find() error {
 	defer cancel()
 
 	var filter bson.D
+
 	if !u.Id.IsZero() {
 		filter = bson.D{{"_id", u.Id}}
 	} else if len(u.Phone) > 0 {
@@ -92,7 +93,6 @@ func (u *User) Find() error {
 	} else {
 		return errors.New("No query condition found")
 	}
-
 	err := db.Collection("user").FindOne(ctx, filter).Decode(u)
 
 	if err != nil {

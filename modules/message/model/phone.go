@@ -1,6 +1,8 @@
 package model
 
 import (
+	"strings"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sns"
 )
@@ -12,6 +14,9 @@ type Txt struct {
 }
 
 func (t *Txt) valid() error {
+	if !strings.HasPrefix(t.Number, "+64") {
+		t.Number = "+64" + t.Number
+	}
 	return nil
 }
 

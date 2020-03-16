@@ -30,17 +30,21 @@ func LoadAfterRouter(e *echo.Echo, c config.Config) {
 		AllowMethods: []string{"*"},
 		AllowHeaders: []string{"*"},
 	}))
-
 	// JWT handling
 	jwtAccessSigningKey, _ := c.Get("system.jwt.access.key")
+
 	e.Use(jwt.JWTWithConfig(jwt.JWTConfig{
 		Skipper: func(e echo.Context) bool {
 			r := e.Get("router").(router.Router)
-			route, err := r.Match(e.Request().Method, e.Path())
-			if err != nil {
+			if _, err := r.Match(e.Request().Method, e.Path()); err != nil {
 				return true
 			}
-			return len(route.Roles) == 0
+			return false
+			// route, err := r.Match(e.Request().Method, e.Path())
+			// if err != nil {
+			// 	return true
+			// }
+			// return len(route.Roles) == 0
 		},
 		SigningKey: []byte(jwtAccessSigningKey),
 	}))

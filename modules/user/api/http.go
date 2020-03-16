@@ -144,6 +144,7 @@ func DriverRegister(c echo.Context) error {
 	if roles.Is(constant.ROLE_DRIVER) {
 		return errors.New("is driver already")
 	}
+
 	user := &model.User{Id: uid}
 	if err := user.Find(); err != nil {
 		return errors.New("cannot find user")
