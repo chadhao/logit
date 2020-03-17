@@ -135,7 +135,11 @@ func CheckVerificationCode(c echo.Context) error {
 	}
 
 	red := model.Redis{Key: vr.Phone}
-	if code, err := red.Get(); err != nil || vr.Code != code {
+	code, err := red.Get()
+	if err != nil {
+		return err
+	}
+	if vr.Code != code {
 		return errors.New("verification code does not match")
 	}
 	return c.JSON(http.StatusOK, "ok")
