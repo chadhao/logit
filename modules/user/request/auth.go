@@ -159,7 +159,7 @@ func (r *VerificationRequest) Send() (err error) {
 		}
 	case valid.IsEmail(r.Email):
 		redisKey = r.Email
-		durationStr = "15m"
+		durationStr = "12h"
 		if code, err = r.emailSent(); err != nil {
 			return err
 		}

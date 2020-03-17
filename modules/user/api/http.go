@@ -127,15 +127,17 @@ func UserRegister(c echo.Context) error {
 
 func EmailVerify(c echo.Context) error {
 	er := request.EmailVerifyRequest{}
+	html := "<h1>Hi there,</h1><p>Your email has been verified!</p>"
 
 	if err := c.Bind(&er); err != nil {
-		return err
+		html = "<h1>Bad request</h1><p>" + err.Error() + "</p>"
+		return c.HTML(http.StatusBadRequest, html)
 	}
 	if _, err := er.Verify(); err != nil {
-		return err
+		html = "<h1>Bad request</h1><p>" + err.Error() + "</p>"
+		return c.HTML(http.StatusBadRequest, html)
 	}
 
-	html := "<h1>Hi there,</h1><p>Your email has been verified!</p>"
 	return c.HTML(http.StatusOK, html)
 }
 
