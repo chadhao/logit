@@ -125,6 +125,22 @@ func UserRegister(c echo.Context) error {
 	return c.JSON(http.StatusOK, token)
 }
 
+func CheckVerificationCode(c echo.Context) error {
+	vr := struct {
+		Phone string `json:"phone"`
+		Code  string `json:"code"`
+	}{}
+	if err := c.Bind(&vr); err != nil {
+		return err
+	}
+
+	red := model.Redis{Key: vr.Phone}
+	if code, err := red.Get(); err != nil || vr.Code != code {
+		return errors.New("verification code does not match")
+	}
+	return c.JSON(http.StatusOK, "ok")
+}
+
 func EmailVerify(c echo.Context) error {
 	er := request.EmailVerifyRequest{}
 	html := "<h1>Hi there,</h1><p>Your email has been verified!</p>"
