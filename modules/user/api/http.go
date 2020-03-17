@@ -115,6 +115,13 @@ func UserRegister(c echo.Context) error {
 		return err
 	}
 
+	// 当用户注册后为用户发送email验证邮件
+	go func(email string) {
+		vr := request.VerificationRequest{
+			Email: email,
+		}
+		vr.Send()
+	}(ur.Email)
 	return c.JSON(http.StatusOK, token)
 }
 

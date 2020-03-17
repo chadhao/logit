@@ -148,16 +148,18 @@ func (r *ExistanceRequest) Check() map[string]bool {
 
 func (r *VerificationRequest) Send() (err error) {
 	// 生成code,并保存至redis
-	var code, redisKey string
+	var code, redisKey, durationStr string
 	// 发送至电话或者邮箱
 	switch {
 	case len(r.Phone) > 0 && valid.IsNumeric(r.Phone):
 		redisKey = r.Phone
+		durationStr = "5m"
 		if code, err = r.txtSent(); err != nil {
 			return err
 		}
 	case valid.IsEmail(r.Email):
 		redisKey = r.Email
+		durationStr = "15m"
 		if code, err = r.emailSent(); err != nil {
 			return err
 		}
@@ -165,7 +167,7 @@ func (r *VerificationRequest) Send() (err error) {
 		return errors.New("phone number or email is requried")
 	}
 
-	duration, _ := time.ParseDuration("5m")
+	duration, _ := time.ParseDuration(durationStr)
 	red := model.Redis{
 		Key:            redisKey,
 		ExpireDuration: duration,
