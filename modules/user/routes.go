@@ -58,7 +58,7 @@ func loadRoutes(r router.Router) {
 	})
 	r.Add(&router.Route{
 		Path:    "/email/verification",
-		Method:  http.MethodPost,
+		Method:  http.MethodGet,
 		Handler: api.EmailVerify,
 	})
 	r.Add(&router.Route{

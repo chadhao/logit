@@ -124,12 +124,12 @@ func EmailVerify(c echo.Context) error {
 	if err := c.Bind(&er); err != nil {
 		return err
 	}
-
-	if err := er.Verify(); err != nil {
+	if _, err := er.Verify(); err != nil {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, "ok")
+	html := "<h1>Hi there,</h1><p>Your email has been verified!</p>"
+	return c.HTML(http.StatusOK, html)
 }
 
 func DriverRegister(c echo.Context) error {

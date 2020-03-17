@@ -95,32 +95,32 @@ func (r *LoginRequest) PasswordLogin() (*model.User, error) {
 	return &u, nil
 }
 
-func (e *EmailVerifyRequest) Verify() error {
+func (e *EmailVerifyRequest) Verify() (*model.User, error) {
 	if _, err := valid.ValidateStruct(e); err != nil {
-		return err
+		return nil, err
 	}
 
 	red := model.Redis{Key: e.Email}
 	if token, err := red.Get(); err != nil || e.Token != token {
-		return errors.New("token does not match")
+		return nil, errors.New("token does not match")
 	}
 
-	u := model.User{
+	u := &model.User{
 		Email: e.Email,
 	}
 
 	if err := u.Find(); err != nil {
-		return err
+		return nil, err
 	}
 
 	u.IsEmailVerified = true
 	if err := u.Update(); err != nil {
-		return err
+		return nil, err
 	}
 
 	red.Expire()
 
-	return nil
+	return u, nil
 }
 
 func (r *ExistanceRequest) Check() map[string]bool {
@@ -149,10 +149,9 @@ func (r *ExistanceRequest) Check() map[string]bool {
 func (r *VerificationRequest) Send() (err error) {
 	// 生成code,并保存至redis
 	var code, redisKey string
-
 	// 发送至电话或者邮箱
 	switch {
-	case valid.IsNumeric(r.Phone):
+	case len(r.Phone) > 0 && valid.IsNumeric(r.Phone):
 		redisKey = r.Phone
 		if code, err = r.txtSent(); err != nil {
 			return err
@@ -189,8 +188,8 @@ func (r *VerificationRequest) emailSent() (string, error) {
 		Recipients: []string{r.Email},
 		Subject:    "Logit Verification Email",
 		HTMLBody: "<h1>Logit Verification Email</h1><p>Please click " +
-			"<a href='http://dev.logit.co.nz/email/verification?email=" + r.Email + "?token=" + code + "'>here</a>" +
-			"to active email.</p>",
+			"<a href='http://dev.logit.co.nz/email/verification?email=" + r.Email + "&token=" + code + "'>here</a>" +
+			" to active email.</p>",
 		CharSet: "UTF-8",
 	}
 	return code, msgApi.SendEmail(email)
