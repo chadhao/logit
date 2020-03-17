@@ -153,7 +153,7 @@ func (r *VerificationRequest) Send() (err error) {
 	switch {
 	case len(r.Phone) > 0 && valid.IsNumeric(r.Phone):
 		redisKey = r.Phone
-		durationStr = "5m"
+		durationStr = "10m"
 		if code, err = r.txtSent(); err != nil {
 			return err
 		}
