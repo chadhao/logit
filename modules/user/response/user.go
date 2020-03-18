@@ -27,6 +27,10 @@ func (r *UserInfoResponse) Format(user *model.User, driver *model.Driver, tos []
 	r.IsDriver = user.IsDriver
 	r.RoleIDs = user.RoleIDs
 	r.CreatedAt = user.CreatedAt
-	r.Driver = driver
-	r.TransportOperators = tos
+	if !driver.ID.IsZero() {
+		r.Driver = driver
+	}
+	if len(tos) > 0 {
+		r.TransportOperators = tos
+	}
 }
