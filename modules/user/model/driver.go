@@ -33,8 +33,8 @@ func (d *Driver) Exists() bool {
 	defer cancel()
 
 	conditions := primitive.A{}
-	if !d.Id.IsZero() {
-		conditions = append(conditions, bson.D{{"_id", d.Id}})
+	if !d.ID.IsZero() {
+		conditions = append(conditions, bson.D{{"_id", d.ID}})
 	}
 	if len(d.LicenseNumber) > 0 {
 		conditions = append(conditions, bson.D{{"licenseNumber", d.LicenseNumber}})
@@ -54,8 +54,8 @@ func (d *Driver) Find() error {
 	defer cancel()
 
 	var filter bson.D
-	if !d.Id.IsZero() {
-		filter = bson.D{{"_id", d.Id}}
+	if !d.ID.IsZero() {
+		filter = bson.D{{"_id", d.ID}}
 	} else if len(d.LicenseNumber) > 0 {
 		filter = bson.D{{"licenseNumber", d.LicenseNumber}}
 	}

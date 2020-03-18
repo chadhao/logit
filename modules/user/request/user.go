@@ -20,14 +20,14 @@ type (
 		Password string `json:"password" valid:"stringlength(6|32)"`
 	}
 	DriverRegRequest struct {
-		Id            primitive.ObjectID `json:"id"`
+		ID            primitive.ObjectID `json:"id"`
 		LicenseNumber string             `json:"licenseNumber"`
 		DateOfBirth   time.Time          `json:"dateOfBirth"`
 		Firstnames    string             `json:"firstnames"`
 		Surname       string             `json:"surname"`
 	}
 	TransportOperatorRegRequest struct {
-		Id            primitive.ObjectID `json:"id"`
+		ID            primitive.ObjectID `json:"id"`
 		LicenseNumber string             `json:"licenseNumber"`
 		Name          string             `json:"name"`
 	}
@@ -62,7 +62,7 @@ func (r *UserRegRequest) Reg() (*model.User, error) {
 func (r *DriverRegRequest) Reg() (*model.Driver, error) {
 	// Should add Request content validation here
 	d := model.Driver{
-		Id:            r.Id,
+		ID:            r.ID,
 		LicenseNumber: r.LicenseNumber,
 		DateOfBirth:   r.DateOfBirth,
 		Firstnames:    r.Firstnames,
@@ -80,7 +80,7 @@ func (r *DriverRegRequest) Reg() (*model.Driver, error) {
 func (r *TransportOperatorRegRequest) Reg() (*model.TransportOperator, error) {
 	// Should add Request content validation here
 	d := model.TransportOperator{
-		Id:            r.Id,
+		ID:            r.ID,
 		LicenseNumber: r.LicenseNumber,
 		Name:          r.Name,
 		CreatedAt:     time.Now(),

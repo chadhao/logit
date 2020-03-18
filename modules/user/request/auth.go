@@ -59,11 +59,11 @@ func (r *RefreshTokenRequest) Validate(c config.Config) (*model.User, error) {
 	}
 
 	claims := token.Claims.(jwt.MapClaims)
-	userId, err := primitive.ObjectIDFromHex(claims["sub"].(string))
+	userID, err := primitive.ObjectIDFromHex(claims["sub"].(string))
 	if err != nil {
 		return nil, err
 	}
-	u.Id = userId
+	u.ID = userID
 
 	return &u, nil
 }
@@ -85,7 +85,7 @@ func (r *LoginRequest) PasswordLogin() (*model.User, error) {
 		if err := d.Find(); err != nil {
 			return nil, err
 		}
-		u.Id = d.Id
+		u.ID = d.ID
 		u.Password = r.Password
 		if err := u.PasswordLogin(); err != nil {
 			return nil, err

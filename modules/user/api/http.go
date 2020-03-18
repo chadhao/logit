@@ -71,7 +71,7 @@ func GetUserInfo(c echo.Context) error {
 	uid, _ := c.Get("user").(primitive.ObjectID)
 
 	var (
-		user   = &model.User{Id: uid}
+		user   = &model.User{ID: uid}
 		driver = &model.Driver{}
 		tos    = []*model.TransportOperator{}
 	)
@@ -80,13 +80,13 @@ func GetUserInfo(c echo.Context) error {
 		return err
 	}
 
-	roles := utils.RolesAssert(user.RoleIds)
+	roles := utils.RolesAssert(user.RoleIDs)
 	if roles.Is(constant.ROLE_DRIVER) {
-		driver.Id = uid
+		driver.ID = uid
 		driver.Find()
 	}
 	if roles.Is(constant.ROLE_TO_SUPER) {
-		to := &model.TransportOperator{Id: uid}
+		to := &model.TransportOperator{ID: uid}
 		to.Find()
 		tos = append(tos, to)
 	}
@@ -174,20 +174,20 @@ func DriverRegister(c echo.Context) error {
 		return errors.New("is driver already")
 	}
 
-	user := &model.User{Id: uid}
+	user := &model.User{ID: uid}
 	if err := user.Find(); err != nil {
 		return errors.New("cannot find user")
 	}
 
 	// Assign driver identity
-	dr.Id = uid
+	dr.ID = uid
 	if _, err := dr.Reg(); err != nil {
 		return err
 	}
 
 	// Update user role and isDriver
 	user.IsDriver = true
-	user.RoleIds = append(user.RoleIds, constant.ROLE_DRIVER)
+	user.RoleIDs = append(user.RoleIDs, constant.ROLE_DRIVER)
 	if err := user.Update(); err != nil {
 		return err
 	}
@@ -213,19 +213,19 @@ func TransportOperatorRegister(c echo.Context) error {
 	if roles.Is(constant.ROLE_TO_SUPER) {
 		return errors.New("is transport operator super admin already")
 	}
-	user := &model.User{Id: uid}
+	user := &model.User{ID: uid}
 	if err := user.Find(); err != nil {
 		return errors.New("cannot find user")
 	}
 
 	// Assign transport operator super identity
-	tr.Id = uid
+	tr.ID = uid
 	if _, err := tr.Reg(); err != nil {
 		return err
 	}
 
 	// Update user role
-	user.RoleIds = append(user.RoleIds, constant.ROLE_TO_SUPER)
+	user.RoleIDs = append(user.RoleIDs, constant.ROLE_TO_SUPER)
 	if err := user.Update(); err != nil {
 		return err
 	}
@@ -260,7 +260,7 @@ func UserUpdate(c echo.Context) error {
 		return err
 	}
 	uid, _ := c.Get("user").(primitive.ObjectID)
-	user := &model.User{Id: uid}
+	user := &model.User{ID: uid}
 	if err := user.Find(); err != nil {
 		return err
 	}
@@ -313,7 +313,7 @@ func VehicleCreate(c echo.Context) error {
 		return errors.New("is not driver")
 	}
 
-	vr.DriverId = uid
+	vr.DriverID = uid
 	vehicle, err := vr.Create()
 	if err != nil {
 		return err
@@ -325,7 +325,7 @@ func VehicleCreate(c echo.Context) error {
 func VehicleDelete(c echo.Context) error {
 
 	vr := struct {
-		Id primitive.ObjectID `json:"id"`
+		ID primitive.ObjectID `json:"id"`
 	}{}
 	if err := c.Bind(&vr); err != nil {
 		return err
@@ -334,12 +334,12 @@ func VehicleDelete(c echo.Context) error {
 	uid, _ := c.Get("user").(primitive.ObjectID)
 
 	vehicle := &model.Vehicle{
-		Id: vr.Id,
+		ID: vr.ID,
 	}
 	if err := vehicle.Find(); err != nil {
 		return err
 	}
-	if vehicle.DriverId != uid {
+	if vehicle.DriverID != uid {
 		return errors.New("no authorization")
 	}
 
@@ -353,21 +353,21 @@ func VehicleDelete(c echo.Context) error {
 func GetVehicles(c echo.Context) error {
 
 	vr := struct {
-		DriverId primitive.ObjectID `json:"driverId" query:"driverId"`
+		DriverID primitive.ObjectID `json:"driverID" query:"driverID"`
 	}{}
 	if err := c.Bind(&vr); err != nil {
 		return err
 	}
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
-	if uid != vr.DriverId {
+	if uid != vr.DriverID {
 		return errors.New("no authorization")
 	}
 
 	vehicle := &model.Vehicle{
-		DriverId: vr.DriverId,
+		DriverID: vr.DriverID,
 	}
-	vehicles, err := vehicle.FindByDriverId()
+	vehicles, err := vehicle.FindByDriverID()
 	if err != nil {
 		return err
 	}

@@ -16,7 +16,7 @@ func (v *Vehicle) Create() error {
 		return errors.New("Vehicle exists")
 	}
 
-	v.Id = primitive.NewObjectID()
+	v.ID = primitive.NewObjectID()
 
 	vehicleBson, err := bson.Marshal(v)
 	if err != nil {
@@ -34,7 +34,7 @@ func (v *Vehicle) Delete() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	filter := bson.D{{"_id", v.Id}}
+	filter := bson.D{{"_id", v.ID}}
 
 	if _, err := db.Collection("vehicle").DeleteOne(ctx, filter); err != nil {
 		return nil
@@ -47,7 +47,7 @@ func (v *Vehicle) Exists() bool {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	conditions := primitive.A{
-		bson.D{{"driverId", v.DriverId}},
+		bson.D{{"driverID", v.DriverID}},
 		bson.D{{"registration", v.Registration}},
 	}
 
@@ -64,7 +64,7 @@ func (v *Vehicle) Find() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	filter := bson.D{{"_id", v.Id}}
+	filter := bson.D{{"_id", v.ID}}
 
 	err := db.Collection("vehicle").FindOne(ctx, filter).Decode(v)
 
@@ -75,10 +75,10 @@ func (v *Vehicle) Find() error {
 	return nil
 }
 
-func (v *Vehicle) FindByDriverId() ([]Vehicle, error) {
+func (v *Vehicle) FindByDriverID() ([]Vehicle, error) {
 	vehicles := []Vehicle{}
 	filter := bson.M{
-		"driverId": v.DriverId,
+		"driverID": v.DriverID,
 	}
 
 	cursor, err := db.Collection("vehicle").Find(context.TODO(), filter)

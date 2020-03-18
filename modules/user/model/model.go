@@ -8,14 +8,14 @@ import (
 
 type (
 	User struct {
-		Id              primitive.ObjectID `json:"id,omitempty" bson:"_id"`
+		ID              primitive.ObjectID `json:"id,omitempty" bson:"_id"`
 		Phone           string             `json:"phone,omitempty" bson:"phone"`
 		Email           string             `json:"email,omitempty" bson:"email"`
 		IsEmailVerified bool               `json:"isEmailVerified,omitempty" bson:"isEmailVerified"`
 		Password        string             `json:"password,omitempty" bson:"password"`
 		Pin             string             `json:"pin,omitempty" bson:"pin"`
 		IsDriver        bool               `json:"isDriver,omitempty" bson:"isDriver"`
-		RoleIds         []int              `json:"roleIds,omitempty" bson:"roleIds"`
+		RoleIDs         []int              `json:"roleIDs,omitempty" bson:"roleIDs"`
 		CreatedAt       time.Time          `json:"createdAt" bson:"createdAt"`
 	}
 
@@ -24,13 +24,13 @@ type (
 		AccessTokenExpires  time.Time          `json:"accessTokenExpires,omitempty"`
 		RefreshToken        string             `json:"refreshToken,omitempty"`
 		RefreshTokenExpires time.Time          `json:"refreshTokenExpires,omitempty"`
-		UserId              primitive.ObjectID `json:"userId,omitempty"`
-		RoleIds             []int              `json:"roleIds,omitempty"`
+		UserID              primitive.ObjectID `json:"userID,omitempty"`
+		RoleIDs             []int              `json:"roleIDs,omitempty"`
 	}
 
 	Driver struct {
-		Id                   primitive.ObjectID   `json:"id" bson:"_id"`
-		TransportOperatorIds []primitive.ObjectID `json:"transportOperatorIds" bson:"transportOperatorIds"`
+		ID                   primitive.ObjectID   `json:"id" bson:"_id"`
+		TransportOperatorIDs []primitive.ObjectID `json:"transportOperatorIDs" bson:"transportOperatorIDs"`
 		LicenseNumber        string               `json:"licenseNumber" bson:"licenseNumber"`
 		DateOfBirth          time.Time            `json:"dateOfBirth" bson:"dateOfBirth"`
 		Firstnames           string               `json:"firstnames" bson:"firstnames"`
@@ -39,16 +39,16 @@ type (
 	}
 
 	Vehicle struct {
-		Id           primitive.ObjectID `json:"id" bson:"_id"`
-		DriverId     primitive.ObjectID `json:"driverId" bson:"driverId"`
+		ID           primitive.ObjectID `json:"id" bson:"_id"`
+		DriverID     primitive.ObjectID `json:"driverID" bson:"driverID"`
 		Registration string             `json:"registration" bson:"registration"`
 		IsDiesel     bool               `json:"isDiesel" bson:"isDiesel"`
 		CreatedAt    time.Time          `json:"createdAt" bson:"createdAt"`
 	}
 
 	TransportOperator struct {
-		Id            primitive.ObjectID   `json:"id" bson:"_id"`
-		UserIds       []primitive.ObjectID `json:"userIds" bson:"userIds"`
+		ID            primitive.ObjectID   `json:"id" bson:"_id"`
+		UserIDs       []primitive.ObjectID `json:"userIDs" bson:"userIDs"`
 		LicenseNumber string               `json:"licenseNumber" bson:"licenseNumber"`
 		Name          string               `json:"name" bson:"name"`
 		CreatedAt     time.Time            `json:"createdAt" bson:"createdAt"`

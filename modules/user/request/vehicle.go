@@ -11,7 +11,7 @@ import (
 
 type (
 	VehicleCreateRequest struct {
-		DriverId     primitive.ObjectID `json:"driverId" valid:"-"`
+		DriverID     primitive.ObjectID `json:"driverID" valid:"-"`
 		Registration string             `json:"registration" valid:"numeric,stringlength(5|9)"`
 		IsDiesel     bool               `json:"isDiesel" valid:"required"`
 	}
@@ -23,8 +23,8 @@ func (r *VehicleCreateRequest) Create() (*model.Vehicle, error) {
 	}
 
 	vehicle := &model.Vehicle{
-		Id:           primitive.NewObjectID(),
-		DriverId:     r.DriverId,
+		ID:           primitive.NewObjectID(),
+		DriverID:     r.DriverID,
 		Registration: r.Registration,
 		IsDiesel:     r.IsDiesel,
 		CreatedAt:    time.Now(),

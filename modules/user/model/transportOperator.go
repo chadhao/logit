@@ -33,8 +33,8 @@ func (t *TransportOperator) Exists() bool {
 	defer cancel()
 
 	conditions := primitive.A{}
-	if !t.Id.IsZero() {
-		conditions = append(conditions, bson.D{{"_id", t.Id}})
+	if !t.ID.IsZero() {
+		conditions = append(conditions, bson.D{{"_id", t.ID}})
 	}
 	if len(t.LicenseNumber) > 0 {
 		conditions = append(conditions, bson.D{{"licenseNumber", t.LicenseNumber}})
@@ -54,8 +54,8 @@ func (t *TransportOperator) Find() error {
 	defer cancel()
 
 	var filter bson.D
-	if !t.Id.IsZero() {
-		filter = bson.D{{"_id", t.Id}}
+	if !t.ID.IsZero() {
+		filter = bson.D{{"_id", t.ID}}
 	} else if len(t.LicenseNumber) > 0 {
 		filter = bson.D{{"licenseNumber", t.LicenseNumber}}
 	}

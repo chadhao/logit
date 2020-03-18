@@ -19,7 +19,7 @@ func (u *User) Create() error {
 		return errors.New("User exists")
 	}
 
-	u.Id = primitive.NewObjectID()
+	u.ID = primitive.NewObjectID()
 
 	userBson, err := bson.Marshal(u)
 	if err != nil {
@@ -37,7 +37,7 @@ func (u *User) Update() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	filter := bson.D{{"_id", u.Id}}
+	filter := bson.D{{"_id", u.ID}}
 	userBson, err := bson.Marshal(u)
 	if err != nil {
 		return err
@@ -59,8 +59,8 @@ func (u *User) Exists() bool {
 	defer cancel()
 
 	conditions := primitive.A{}
-	if !u.Id.IsZero() {
-		conditions = append(conditions, bson.D{{"_id", u.Id}})
+	if !u.ID.IsZero() {
+		conditions = append(conditions, bson.D{{"_id", u.ID}})
 	}
 	if len(u.Phone) > 0 {
 		conditions = append(conditions, bson.D{{"phone", u.Phone}})
@@ -84,8 +84,8 @@ func (u *User) Find() error {
 
 	var filter bson.D
 
-	if !u.Id.IsZero() {
-		filter = bson.D{{"_id", u.Id}}
+	if !u.ID.IsZero() {
+		filter = bson.D{{"_id", u.ID}}
 	} else if len(u.Phone) > 0 {
 		filter = bson.D{{"phone", u.Phone}}
 	} else if len(u.Email) > 0 {
@@ -122,16 +122,16 @@ func (u *User) IssueToken(c conf.Config) (*Token, error) {
 	token := &Token{
 		AccessTokenExpires:  now.Add(30 * time.Minute),
 		RefreshTokenExpires: now.Add(168 * time.Hour),
-		UserId:              u.Id,
-		RoleIds:             u.RoleIds,
+		UserID:              u.ID,
+		RoleIDs:             u.RoleIDs,
 	}
 
 	accessToken := jwt.New(jwt.SigningMethodHS256)
 	accessTokenClaims := accessToken.Claims.(jwt.MapClaims)
 	accessTokenClaims["iss"] = "logit.co.nz"
 	accessTokenClaims["exp"] = token.AccessTokenExpires.Unix()
-	accessTokenClaims["sub"] = u.Id.Hex()
-	accessTokenClaims["roles"] = u.RoleIds
+	accessTokenClaims["sub"] = u.ID.Hex()
+	accessTokenClaims["roles"] = u.RoleIDs
 	accessTokenSigningKey, _ := c.Get("system.jwt.access.key")
 	if accessTokenSigned, err := accessToken.SignedString([]byte(accessTokenSigningKey)); err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ func (u *User) IssueToken(c conf.Config) (*Token, error) {
 	refreshTokenClaims := refreshToken.Claims.(jwt.MapClaims)
 	refreshTokenClaims["iss"] = "logit.co.nz"
 	refreshTokenClaims["exp"] = token.RefreshTokenExpires.Unix()
-	refreshTokenClaims["sub"] = u.Id.Hex()
+	refreshTokenClaims["sub"] = u.ID.Hex()
 	refreshTokenSigningKey, _ := c.Get("system.jwt.refresh.key")
 	if refreshTokenSigned, err := refreshToken.SignedString([]byte(refreshTokenSigningKey)); err != nil {
 		return nil, err

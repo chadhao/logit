@@ -8,24 +8,24 @@ import (
 )
 
 type UserInfoResponse struct {
-	Id                 primitive.ObjectID         `json:"id"`
+	ID                 primitive.ObjectID         `json:"id"`
 	Phone              string                     `json:"phone"`
 	Email              string                     `json:"email"`
 	IsEmailVerified    bool                       `json:"isEmailVerified"`
 	IsDriver           bool                       `json:"isDriver"`
-	RoleIds            []int                      `json:"roleIds"`
+	RoleIDs            []int                      `json:"roleIDs"`
 	CreatedAt          time.Time                  `json:"createdAt"`
 	Driver             *model.Driver              `json:"driver,omitempty"`
 	TransportOperators []*model.TransportOperator `json:"transportOperators,omitempty"`
 }
 
 func (r *UserInfoResponse) Format(user *model.User, driver *model.Driver, tos []*model.TransportOperator) {
-	r.Id = user.Id
+	r.ID = user.ID
 	r.Phone = user.Phone
 	r.Email = user.Email
 	r.IsEmailVerified = user.IsEmailVerified
 	r.IsDriver = user.IsDriver
-	r.RoleIds = user.RoleIds
+	r.RoleIDs = user.RoleIDs
 	r.CreatedAt = user.CreatedAt
 	r.Driver = driver
 	r.TransportOperators = tos
