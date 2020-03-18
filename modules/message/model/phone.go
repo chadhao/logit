@@ -1,8 +1,8 @@
 package model
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/sns"
+	"log"
+	"strings"
 )
 
 // Txt 电话短信
@@ -12,6 +12,9 @@ type Txt struct {
 }
 
 func (t *Txt) valid() error {
+	if !strings.HasPrefix(t.Number, "+64") {
+		t.Number = "+64" + t.Number
+	}
 	return nil
 }
 
@@ -21,11 +24,12 @@ func (t *Txt) Send() error {
 		return err
 	}
 
-	params := &sns.PublishInput{
-		PhoneNumber: aws.String(t.Number),
-		Message:     aws.String(t.Message),
-	}
+	log.Println(t)
+	// params := &sns.PublishInput{
+	// 	PhoneNumber: aws.String(t.Number),
+	// 	Message:     aws.String(t.Message),
+	// }
 
-	_, err := awsSNS.Publish(params)
-	return err
+	// _, err := awsSNS.Publish(params)
+	return nil
 }

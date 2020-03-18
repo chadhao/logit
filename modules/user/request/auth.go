@@ -7,8 +7,8 @@ import (
 	valid "github.com/asaskevich/govalidator"
 	"github.com/chadhao/logit/config"
 	msgApi "github.com/chadhao/logit/modules/message/api"
-	msgModel "github.com/chadhao/logit/modules/message/model"
 
+	"github.com/chadhao/logit/modules/user/constant"
 	"github.com/chadhao/logit/modules/user/model"
 	"github.com/chadhao/logit/utils"
 	"github.com/dgrijalva/jwt-go"
@@ -22,35 +22,27 @@ type (
 	LoginRequest struct {
 		Phone    string `json:"phone"`
 		Email    string `json:"email"`
-		Licence  string `json:"licence"`
+		License  string `json:"license"`
 		Password string `json:"password"`
-	}
-	UserRegRequest struct {
-		Phone    string `json:"phone"`
-		Code     string `json:"code"`
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-	DriverRegRequest struct {
-		Id            primitive.ObjectID `json:"id"`
-		LicenceNumber string             `json:"licenceNumber"`
-		DateOfBirth   time.Time          `json:"dateOfBirth"`
-		Firstnames    string             `json:"firstnames"`
-		Surname       string             `json:"surname"`
-	}
-	TransportOperatorRegRequest struct {
-		Id            primitive.ObjectID `json:"id"`
-		LicenceNumber string             `json:"licenceNumber"`
-		Name          string             `json:"name"`
 	}
 	ExistanceRequest struct {
 		Phone   string `json:"phone"`
 		Email   string `json:"email"`
-		Licence string `json:"licence"`
+		License string `json:"license"`
 	}
 	VerificationRequest struct {
 		Phone string `json:"phone"`
 		Email string `json:"email"`
+	}
+	EmailVerifyRequest struct {
+		Email string `query:"email" valid:"email"`
+		Token string `query:"token" valid:"required"`
+	}
+	ForgetPasswordRequest struct {
+		Phone    string `json:"phone" valid:"numeric,stringlength(8|11),optional"`
+		Email    string `json:"email" valid:"email,optional"`
+		Token    string `json:"token" valid:"required"`
+		Password string `json:"password" valid:"stringlength(6|32)"`
 	}
 )
 
@@ -88,7 +80,7 @@ func (r *LoginRequest) PasswordLogin() (*model.User, error) {
 		}
 	} else {
 		d := model.Driver{
-			LicenceNumber: r.Licence,
+			LicenseNumber: r.License,
 		}
 		if err := d.Find(); err != nil {
 			return nil, err
@@ -103,44 +95,32 @@ func (r *LoginRequest) PasswordLogin() (*model.User, error) {
 	return &u, nil
 }
 
-func (r *UserRegRequest) Reg() (*model.User, error) {
-	// Should add Request content validation here
-
-	red := model.Redis{Key: r.Phone}
-	if code, err := red.Get(); err != nil || r.Code != code {
-		return nil, errors.New("verification code does not match")
+func (e *EmailVerifyRequest) Verify() (*model.User, error) {
+	if _, err := valid.ValidateStruct(e); err != nil {
+		return nil, err
 	}
 
-	u := model.User{
-		Phone:    r.Phone,
-		Email:    r.Email,
-		Password: r.Password,
+	red := model.Redis{Key: e.Email}
+	if token, err := red.Get(); err != nil || e.Token != token {
+		return nil, errors.New("token does not match")
 	}
 
-	if err := u.Create(); err != nil {
+	u := &model.User{
+		Email: e.Email,
+	}
+
+	if err := u.Find(); err != nil {
+		return nil, err
+	}
+
+	u.IsEmailVerified = true
+	if err := u.Update(); err != nil {
 		return nil, err
 	}
 
 	red.Expire()
 
-	return &u, nil
-}
-
-func (r *DriverRegRequest) Reg() (*model.Driver, error) {
-	// Should add Request content validation here
-	d := model.Driver{
-		Id:            r.Id,
-		LicenceNumber: r.LicenceNumber,
-		DateOfBirth:   r.DateOfBirth,
-		Firstnames:    r.Firstnames,
-		Surname:       r.Surname,
-	}
-
-	if err := d.Create(); err != nil {
-		return nil, err
-	}
-
-	return &d, nil
+	return u, nil
 }
 
 func (r *ExistanceRequest) Check() map[string]bool {
@@ -157,9 +137,9 @@ func (r *ExistanceRequest) Check() map[string]bool {
 		}
 		result["email"] = u.Exists()
 	}
-	if len(r.Licence) > 0 {
+	if len(r.License) > 0 {
 		d := model.Driver{
-			LicenceNumber: r.Licence,
+			LicenseNumber: r.License,
 		}
 		result["licemnce"] = d.Exists()
 	}
@@ -168,17 +148,18 @@ func (r *ExistanceRequest) Check() map[string]bool {
 
 func (r *VerificationRequest) Send() (err error) {
 	// 生成code,并保存至redis
-	var code, redisKey string
-
+	var code, redisKey, durationStr string
 	// 发送至电话或者邮箱
 	switch {
-	case valid.IsNumeric(r.Phone):
+	case len(r.Phone) > 0 && valid.IsNumeric(r.Phone):
 		redisKey = r.Phone
+		durationStr = "10m"
 		if code, err = r.txtSent(); err != nil {
 			return err
 		}
 	case valid.IsEmail(r.Email):
 		redisKey = r.Email
+		durationStr = "12h"
 		if code, err = r.emailSent(); err != nil {
 			return err
 		}
@@ -186,7 +167,7 @@ func (r *VerificationRequest) Send() (err error) {
 		return errors.New("phone number or email is requried")
 	}
 
-	duration, _ := time.ParseDuration("5m")
+	duration, _ := time.ParseDuration(durationStr)
 	red := model.Redis{
 		Key:            redisKey,
 		ExpireDuration: duration,
@@ -199,19 +180,40 @@ func (r *VerificationRequest) Send() (err error) {
 func (r *VerificationRequest) txtSent() (string, error) {
 	code := utils.GetRandomCode(6)
 	msg := "[Logit]Your verification code is: " + code
-	return code, msgApi.SendTxt(msgModel.Txt{Number: r.Phone, Message: msg})
+	return code, msgApi.SendTxt(msgApi.TxtRequest{Number: r.Phone, Message: msg})
 }
 
 func (r *VerificationRequest) emailSent() (string, error) {
 	code := utils.GetMD5Hash(r.Email)
-	email := msgModel.Email{
-		Sender:     "sender@logit.co.nz",
+	email := msgApi.EmailRequest{
+		Sender:     constant.EMAIL_SENDER,
 		Recipients: []string{r.Email},
 		Subject:    "Logit Verification Email",
 		HTMLBody: "<h1>Logit Verification Email</h1><p>Please click " +
-			"<a href='https://logit.co.nz/email/verification" + code + "'>here</a>" +
-			"to active email.</p>",
+			"<a href='http://dev.logit.co.nz/email/verification?email=" + r.Email + "&token=" + code + "'>here</a>" +
+			" to active email.</p>",
 		CharSet: "UTF-8",
 	}
 	return code, msgApi.SendEmail(email)
+}
+
+func (r *ForgetPasswordRequest) Verify() (err error) {
+	if _, err := valid.ValidateStruct(r); err != nil {
+		return err
+	}
+	var redisKey string
+	if len(r.Phone) > 0 {
+		redisKey = r.Phone
+	} else if len(r.Email) > 0 {
+		redisKey = r.Email
+	} else {
+		return errors.New("phone number or email is required")
+	}
+	red := model.Redis{Key: redisKey}
+	if token, err := red.Get(); err != nil || r.Token != token {
+		return errors.New("token does not match")
+	}
+
+	red.Expire()
+	return nil
 }

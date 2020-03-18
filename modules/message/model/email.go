@@ -53,7 +53,6 @@ func (e *Email) Send() error {
 		},
 		Source: aws.String(e.Sender),
 	}
-
 	_, err := awsSES.SendEmail(input)
 	return err
 }
