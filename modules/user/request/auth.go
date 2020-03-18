@@ -22,13 +22,13 @@ type (
 	LoginRequest struct {
 		Phone    string `json:"phone"`
 		Email    string `json:"email"`
-		Licence  string `json:"licence"`
+		License  string `json:"license"`
 		Password string `json:"password"`
 	}
 	ExistanceRequest struct {
 		Phone   string `json:"phone"`
 		Email   string `json:"email"`
-		Licence string `json:"licence"`
+		License string `json:"license"`
 	}
 	VerificationRequest struct {
 		Phone string `json:"phone"`
@@ -80,7 +80,7 @@ func (r *LoginRequest) PasswordLogin() (*model.User, error) {
 		}
 	} else {
 		d := model.Driver{
-			LicenceNumber: r.Licence,
+			LicenseNumber: r.License,
 		}
 		if err := d.Find(); err != nil {
 			return nil, err
@@ -137,9 +137,9 @@ func (r *ExistanceRequest) Check() map[string]bool {
 		}
 		result["email"] = u.Exists()
 	}
-	if len(r.Licence) > 0 {
+	if len(r.License) > 0 {
 		d := model.Driver{
-			LicenceNumber: r.Licence,
+			LicenseNumber: r.License,
 		}
 		result["licemnce"] = d.Exists()
 	}

@@ -36,8 +36,8 @@ func (t *TransportOperator) Exists() bool {
 	if !t.Id.IsZero() {
 		conditions = append(conditions, bson.D{{"_id", t.Id}})
 	}
-	if len(t.LicenceNumber) > 0 {
-		conditions = append(conditions, bson.D{{"licenceNumber", t.LicenceNumber}})
+	if len(t.LicenseNumber) > 0 {
+		conditions = append(conditions, bson.D{{"licenseNumber", t.LicenseNumber}})
 	}
 
 	filter := bson.D{{"$or", conditions}}
@@ -56,8 +56,8 @@ func (t *TransportOperator) Find() error {
 	var filter bson.D
 	if !t.Id.IsZero() {
 		filter = bson.D{{"_id", t.Id}}
-	} else if len(t.LicenceNumber) > 0 {
-		filter = bson.D{{"licenceNumber", t.LicenceNumber}}
+	} else if len(t.LicenseNumber) > 0 {
+		filter = bson.D{{"licenseNumber", t.LicenseNumber}}
 	}
 
 	err := db.Collection("transportOperator").FindOne(ctx, filter).Decode(t)

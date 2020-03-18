@@ -21,14 +21,14 @@ type (
 	}
 	DriverRegRequest struct {
 		Id            primitive.ObjectID `json:"id"`
-		LicenceNumber string             `json:"licenceNumber"`
+		LicenseNumber string             `json:"licenseNumber"`
 		DateOfBirth   time.Time          `json:"dateOfBirth"`
 		Firstnames    string             `json:"firstnames"`
 		Surname       string             `json:"surname"`
 	}
 	TransportOperatorRegRequest struct {
 		Id            primitive.ObjectID `json:"id"`
-		LicenceNumber string             `json:"licenceNumber"`
+		LicenseNumber string             `json:"licenseNumber"`
 		Name          string             `json:"name"`
 	}
 )
@@ -63,7 +63,7 @@ func (r *DriverRegRequest) Reg() (*model.Driver, error) {
 	// Should add Request content validation here
 	d := model.Driver{
 		Id:            r.Id,
-		LicenceNumber: r.LicenceNumber,
+		LicenseNumber: r.LicenseNumber,
 		DateOfBirth:   r.DateOfBirth,
 		Firstnames:    r.Firstnames,
 		Surname:       r.Surname,
@@ -81,7 +81,7 @@ func (r *TransportOperatorRegRequest) Reg() (*model.TransportOperator, error) {
 	// Should add Request content validation here
 	d := model.TransportOperator{
 		Id:            r.Id,
-		LicenceNumber: r.LicenceNumber,
+		LicenseNumber: r.LicenseNumber,
 		Name:          r.Name,
 		CreatedAt:     time.Now(),
 	}

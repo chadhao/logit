@@ -31,7 +31,7 @@ type (
 	Driver struct {
 		Id                   primitive.ObjectID   `json:"id" bson:"_id"`
 		TransportOperatorIds []primitive.ObjectID `json:"transportOperatorIds" bson:"transportOperatorIds"`
-		LicenceNumber        string               `json:"licenceNumber" bson:"licenceNumber"`
+		LicenseNumber        string               `json:"licenseNumber" bson:"licenseNumber"`
 		DateOfBirth          time.Time            `json:"dateOfBirth" bson:"dateOfBirth"`
 		Firstnames           string               `json:"firstnames" bson:"firstnames"`
 		Surname              string               `json:"surname" bson:"surname"`
@@ -49,7 +49,7 @@ type (
 	TransportOperator struct {
 		Id            primitive.ObjectID   `json:"id" bson:"_id"`
 		UserIds       []primitive.ObjectID `json:"userIds" bson:"userIds"`
-		LicenceNumber string               `json:"licenceNumber" bson:"licenceNumber"`
+		LicenseNumber string               `json:"licenseNumber" bson:"licenseNumber"`
 		Name          string               `json:"name" bson:"name"`
 		CreatedAt     time.Time            `json:"createdAt" bson:"createdAt"`
 	}

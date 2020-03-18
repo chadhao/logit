@@ -36,8 +36,8 @@ func (d *Driver) Exists() bool {
 	if !d.Id.IsZero() {
 		conditions = append(conditions, bson.D{{"_id", d.Id}})
 	}
-	if len(d.LicenceNumber) > 0 {
-		conditions = append(conditions, bson.D{{"licenceNumber", d.LicenceNumber}})
+	if len(d.LicenseNumber) > 0 {
+		conditions = append(conditions, bson.D{{"licenseNumber", d.LicenseNumber}})
 	}
 
 	filter := bson.D{{"$or", conditions}}
@@ -56,8 +56,8 @@ func (d *Driver) Find() error {
 	var filter bson.D
 	if !d.Id.IsZero() {
 		filter = bson.D{{"_id", d.Id}}
-	} else if len(d.LicenceNumber) > 0 {
-		filter = bson.D{{"licenceNumber", d.LicenceNumber}}
+	} else if len(d.LicenseNumber) > 0 {
+		filter = bson.D{{"licenseNumber", d.LicenseNumber}}
 	}
 
 	err := db.Collection("driver").FindOne(ctx, filter).Decode(d)
