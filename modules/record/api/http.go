@@ -150,6 +150,11 @@ func addNote(c echo.Context) error {
 		if err != nil {
 			return err
 		}
+	case model.TRIPNOTE:
+		note, err = req.constructToTripNote()
+		if err != nil {
+			return err
+		}
 	default:
 		return errors.New("no match noteType")
 	}

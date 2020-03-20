@@ -78,11 +78,11 @@ func (mn *ModificationNote) Add() error {
 // TripNote 行程笔记
 type TripNote struct {
 	Note                `bson:",inline"`
-	TransportOperatorID *primitive.ObjectID `bson:"transportOperatorID,omitempty" json:"transportOperatorID,omitempty" valid:"-"`
-	StartTime           time.Time           `bson:"startTime" json:"startTime" valid:"required"`
-	EndTime             time.Time           `bson:"endTime" json:"endTime" valid:"required"`
-	StartLocation       Location            `bson:"startLocation" json:"startLocation" valid:"required"`
-	EndLocation         Location            `bson:"endLocation" json:"endLocation" valid:"required"`
+	TransportOperatorID primitive.ObjectID `bson:"transportOperatorID" json:"transportOperatorID" valid:"required"`
+	StartTime           time.Time          `bson:"startTime" json:"startTime" valid:"required"`
+	EndTime             time.Time          `bson:"endTime" json:"endTime" valid:"required"`
+	StartLocation       Location           `bson:"startLocation" json:"startLocation" valid:"required"`
+	EndLocation         Location           `bson:"endLocation" json:"endLocation" valid:"required"`
 }
 
 // Add 行程笔记添加到数据库

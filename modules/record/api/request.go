@@ -221,9 +221,14 @@ func (reqAddR *reqAddRecord) constructToSyncRecord(driverID primitive.ObjectID) 
 }
 
 type reqAddNote struct {
-	NoteType model.NoteType     `json:"noteType" valid:"required"`
-	RecordID primitive.ObjectID `json:"recordID" valid:"required"`
-	Comment  string             `json:"comment" valid:"optional"`
+	NoteType            model.NoteType     `json:"noteType" valid:"required"`
+	RecordID            primitive.ObjectID `json:"recordID" valid:"required"`
+	Comment             string             `json:"comment" valid:"optional"`
+	TransportOperatorID primitive.ObjectID `bson:"transportOperatorID" json:"transportOperatorID" valid:"-"`
+	StartTime           time.Time          `bson:"startTime" json:"startTime" valid:"-"`
+	EndTime             time.Time          `bson:"endTime" json:"endTime" valid:"-"`
+	StartLocation       model.Location     `bson:"startLocation" json:"startLocation" valid:"-"`
+	EndLocation         model.Location     `bson:"endLocation" json:"endLocation" valid:"-"`
 }
 
 // valid 添加笔记验证
@@ -282,6 +287,28 @@ func (r *reqAddNote) constructToModificationNote(by primitive.ObjectID) (*model.
 		By: by,
 	}
 	return mn, nil
+}
+
+// constructToTripNote 将reqAddNote构造为TripNote
+func (r *reqAddNote) constructToTripNote() (*model.TripNote, error) {
+	if err := r.valid(); err != nil {
+		return nil, err
+	}
+	tn := &model.TripNote{
+		Note: model.Note{
+			ID:        primitive.NewObjectID(),
+			RecordID:  r.RecordID,
+			Type:      r.NoteType,
+			Comment:   r.Comment,
+			CreatedAt: time.Now(),
+		},
+		TransportOperatorID: r.TransportOperatorID,
+		StartTime:           r.StartTime,
+		EndTime:             r.EndTime,
+		StartLocation:       r.StartLocation,
+		EndLocation:         r.EndLocation,
+	}
+	return tn, nil
 }
 
 func (r *reqAddNote) isDriversRecord(driverID primitive.ObjectID) bool {

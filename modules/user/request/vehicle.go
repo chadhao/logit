@@ -13,7 +13,7 @@ type (
 	VehicleCreateRequest struct {
 		DriverID     primitive.ObjectID `json:"driverID" valid:"-"`
 		Registration string             `json:"registration" valid:"stringlength(5|8)"`
-		IsDiesel     bool               `json:"isDiesel" valid:"required"`
+		IsDiesel     bool               `json:"isDiesel" valid:"-"`
 	}
 )
 
