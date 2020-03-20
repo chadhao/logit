@@ -23,7 +23,7 @@ func getSuscription(c echo.Context) error {
 	case roles.Is(constant.ROLE_ADMIN):
 	case roles.Is(constant.ROLE_DRIVER):
 		uid, _ := c.Get("user").(primitive.ObjectID)
-		if uid != req.DriverID {
+		if uid.Hex() != req.DriverID {
 			return errors.New("not authorized")
 		}
 	default:

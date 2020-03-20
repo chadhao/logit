@@ -1,13 +1,18 @@
 package api
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
-
-import "github.com/chadhao/logit/modules/suscription/model"
+import (
+	"github.com/chadhao/logit/modules/suscription/model"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 type reqSuscription struct {
-	DriverID primitive.ObjectID `json:"driverID" query:"driverID" valid:"required"`
+	DriverID string `json:"driverID" query:"driverID" valid:"required"`
 }
 
 func (req *reqSuscription) getSuscription() (*model.Suscription, error) {
-	return model.GetSuscription(req.DriverID)
+	driverID, err := primitive.ObjectIDFromHex(req.DriverID)
+	if err != nil {
+		return nil, err
+	}
+	return model.GetSuscription(driverID)
 }

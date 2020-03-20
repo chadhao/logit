@@ -243,14 +243,18 @@ func TransportOperatorRegister(c echo.Context) error {
 
 func TransportOperatorApply(c echo.Context) error {
 	r := struct {
-		TransportOperatorID primitive.ObjectID `json:"transportOperatorID" query:"transportOperatorID"`
+		TransportOperatorID string `json:"transportOperatorID" query:"transportOperatorID"`
 	}{}
 
 	if err := c.Bind(&r); err != nil {
 		return err
 	}
+	toID, err := primitive.ObjectIDFromHex(r.TransportOperatorID)
+	if err != nil {
+		return err
+	}
 	to := &model.TransportOperator{
-		ID: r.TransportOperatorID,
+		ID: toID,
 	}
 	if err := to.Find(); err != nil {
 		return err
@@ -389,27 +393,27 @@ func VehicleDelete(c echo.Context) error {
 }
 
 func GetVehicles(c echo.Context) error {
-
 	vr := struct {
-		DriverID primitive.ObjectID `json:"driverID" query:"driverID"`
+		DriverID string `json:"driverID" query:"driverID"`
 	}{}
 	if err := c.Bind(&vr); err != nil {
 		return err
 	}
-
+	driverID, err := primitive.ObjectIDFromHex(vr.DriverID)
+	if err != nil {
+		return err
+	}
 	uid, _ := c.Get("user").(primitive.ObjectID)
-	if uid != vr.DriverID {
+	if uid != driverID {
 		return errors.New("no authorization")
 	}
-
 	vehicle := &model.Vehicle{
-		DriverID: vr.DriverID,
+		DriverID: driverID,
 	}
 	vehicles, err := vehicle.FindByDriverID()
 	if err != nil {
 		return err
 	}
-
 	return c.JSON(http.StatusOK, vehicles)
 }
 
