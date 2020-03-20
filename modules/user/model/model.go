@@ -48,9 +48,12 @@ type (
 
 	TransportOperator struct {
 		ID            primitive.ObjectID   `json:"id" bson:"_id"`
-		UserIDs       []primitive.ObjectID `json:"userIDs" bson:"userIDs"`
+		DriverIDs     []primitive.ObjectID `json:"driverIDs" bson:"driverIDs"`
+		SuperIDs      []primitive.ObjectID `json:"superIDs" bson:"superIDs"`
+		AdminIDs      []primitive.ObjectID `json:"adminIDs" bson:"adminIDs"`
 		LicenseNumber string               `json:"licenseNumber" bson:"licenseNumber"`
 		Name          string               `json:"name" bson:"name"`
+		IsVerified    bool                 `json:"isVerified" bson:"isVerified"`
 		CreatedAt     time.Time            `json:"createdAt" bson:"createdAt"`
 	}
 )

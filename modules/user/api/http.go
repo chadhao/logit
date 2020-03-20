@@ -11,6 +11,7 @@ import (
 	"github.com/chadhao/logit/modules/user/response"
 	"github.com/chadhao/logit/utils"
 	"github.com/labstack/echo/v4"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -209,10 +210,6 @@ func TransportOperatorRegister(c echo.Context) error {
 	}
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
-	roles := utils.RolesAssert(c.Get("roles"))
-	if roles.Is(constant.ROLE_TO_SUPER) {
-		return errors.New("is transport operator super admin already")
-	}
 	user := &model.User{ID: uid}
 	if err := user.Find(); err != nil {
 		return errors.New("cannot find user")
@@ -224,10 +221,12 @@ func TransportOperatorRegister(c echo.Context) error {
 		return err
 	}
 
-	// Update user role
-	user.RoleIDs = append(user.RoleIDs, constant.ROLE_TO_SUPER)
-	if err := user.Update(); err != nil {
-		return err
+	if !utils.RolesAssert(user.RoleIDs).Is(constant.ROLE_TO_SUPER) {
+		// Update user role
+		user.RoleIDs = append(user.RoleIDs, constant.ROLE_TO_SUPER)
+		if err := user.Update(); err != nil {
+			return err
+		}
 	}
 
 	// Issue token
@@ -237,6 +236,57 @@ func TransportOperatorRegister(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, token)
+}
+
+func TransportOperatorApply(c echo.Context) error {
+	r := struct {
+		TransportOperatorID primitive.ObjectID `json:"transportOperatorID" query:"transportOperatorID"`
+	}{}
+
+	if err := c.Bind(&r); err != nil {
+		return err
+	}
+	to := &model.TransportOperator{
+		ID: r.TransportOperatorID,
+	}
+	if err := to.Find(); err != nil {
+		return err
+	}
+
+	uid, _ := c.Get("user").(primitive.ObjectID)
+	if err := to.AddDriver(uid); err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, "ok")
+}
+
+func GetTransportOperators(c echo.Context) error {
+	r := struct {
+		DriverID primitive.ObjectID `json:"driverID" query:"driverID"`
+		Name     string             `json:"name" query:"name"`
+	}{}
+
+	if err := c.Bind(&r); err != nil {
+		return err
+	}
+	filter := bson.M{}
+	uid, _ := c.Get("user").(primitive.ObjectID)
+	if !r.DriverID.IsZero() {
+		if r.DriverID != uid {
+			return errors.New("no authorization")
+		}
+		filter["driverIDs"] = r.DriverID
+	} else {
+		filter["name"] = bson.M{"$regex": "(?i)" + r.Name}
+	}
+	tos, err := model.FindTransportOperatorsByDriverID(filter)
+	if err != nil {
+		return err
+	}
+
+	tosResp := response.TransportOperatorInfoFormat(tos)
+	return c.JSON(http.StatusOK, tosResp)
 }
 
 func GetVerification(c echo.Context) error {

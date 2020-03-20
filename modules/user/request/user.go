@@ -83,6 +83,8 @@ func (r *TransportOperatorRegRequest) Reg() (*model.TransportOperator, error) {
 		ID:            r.ID,
 		LicenseNumber: r.LicenseNumber,
 		Name:          r.Name,
+		IsVerified:    false,
+		SuperIDs:      []primitive.ObjectID{r.ID},
 		CreatedAt:     time.Now(),
 	}
 

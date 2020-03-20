@@ -68,3 +68,25 @@ func (t *TransportOperator) Find() error {
 
 	return nil
 }
+
+func (t *TransportOperator) AddDriver(driverID primitive.ObjectID) error {
+	t.DriverIDs = append(t.DriverIDs, driverID)
+	update := bson.M{"$set": bson.M{"driverIDs": t.DriverIDs}}
+	_, err := db.Collection("transportOperator").UpdateOne(context.TODO(), bson.M{"_id": t.ID}, update)
+	return err
+}
+
+func FindTransportOperatorsByDriverID(filter bson.M) ([]TransportOperator, error) {
+
+	tos := []TransportOperator{}
+	filter["isVerified"] = true
+
+	cursor, err := db.Collection("transportOperator").Find(context.TODO(), filter)
+	if err != nil {
+		return nil, err
+	}
+	if err = cursor.All(context.TODO(), &tos); err != nil {
+		return nil, err
+	}
+	return tos, nil
+}

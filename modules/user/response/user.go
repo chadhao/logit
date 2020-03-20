@@ -34,3 +34,22 @@ func (r *UserInfoResponse) Format(user *model.User, driver *model.Driver, tos []
 		r.TransportOperators = tos
 	}
 }
+
+type TransportOperatorInfoResponse struct {
+	ID            primitive.ObjectID `json:"id"`
+	LicenseNumber string             `json:"licenseNumber"`
+	Name          string             `json:"name"`
+}
+
+func TransportOperatorInfoFormat(tos []model.TransportOperator) []TransportOperatorInfoResponse {
+	r := []TransportOperatorInfoResponse{}
+	for _, v := range tos {
+		t := TransportOperatorInfoResponse{
+			ID:            v.ID,
+			LicenseNumber: v.LicenseNumber,
+			Name:          v.Name,
+		}
+		r = append(r, t)
+	}
+	return r
+}
