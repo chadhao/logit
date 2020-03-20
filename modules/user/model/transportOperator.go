@@ -76,10 +76,33 @@ func (t *TransportOperator) AddDriver(driverID primitive.ObjectID) error {
 	return err
 }
 
-func FindTransportOperatorsByDriverID(filter bson.M) ([]TransportOperator, error) {
+type TransportOperatorFilter struct {
+	DriverID primitive.ObjectID `json:"driverID"`
+	SuperID  primitive.ObjectID `json:"superID"`
+	AdminID  primitive.ObjectID `json:"adminID"`
+	Name     string             `json:"name"`
+}
+
+func (f *TransportOperatorFilter) Find() ([]TransportOperator, error) {
 
 	tos := []TransportOperator{}
-	filter["isVerified"] = true
+
+	filter := bson.M{
+		// "isVerified": true,
+	}
+
+	switch {
+	case !f.DriverID.IsZero():
+		filter["driverIDs"] = f.DriverID
+	case !f.SuperID.IsZero():
+		filter["superIDs"] = f.SuperID
+	case !f.AdminID.IsZero():
+		filter["adminIDs"] = f.AdminID
+	case len(f.Name) > 0:
+		filter["name"] = bson.M{"$regex": "(?i)" + f.Name}
+	default:
+		return nil, errors.New("filter field is required")
+	}
 
 	cursor, err := db.Collection("transportOperator").Find(context.TODO(), filter)
 	if err != nil {
@@ -89,4 +112,45 @@ func FindTransportOperatorsByDriverID(filter bson.M) ([]TransportOperator, error
 		return nil, err
 	}
 	return tos, nil
+}
+
+func (f *TransportOperatorFilter) FindTransportOperatorsRelatedToUser() (drivers []TransportOperator, supers []TransportOperator, admins []TransportOperator, err error) {
+
+	drivers = []TransportOperator{}
+	supers = []TransportOperator{}
+	admins = []TransportOperator{}
+
+	filter := bson.M{
+		"driverIDs": f.DriverID,
+	}
+	cursor, err := db.Collection("transportOperator").Find(context.TODO(), filter)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if err = cursor.All(context.TODO(), &drivers); err != nil {
+		return nil, nil, nil, err
+	}
+
+	filter = bson.M{
+		"superIDs": f.SuperID,
+	}
+	cursor, err = db.Collection("transportOperator").Find(context.TODO(), filter)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if err = cursor.All(context.TODO(), &supers); err != nil {
+		return nil, nil, nil, err
+	}
+
+	filter = bson.M{
+		"adminIDs": f.AdminID,
+	}
+	cursor, err = db.Collection("transportOperator").Find(context.TODO(), filter)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if err = cursor.All(context.TODO(), &admins); err != nil {
+		return nil, nil, nil, err
+	}
+	return drivers, supers, admins, nil
 }

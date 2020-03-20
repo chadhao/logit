@@ -59,12 +59,6 @@ func loadRoutes(r router.Router) {
 		Roles:   []int{constant.ROLE_USER_DEFAULT},
 	})
 	r.Add(&router.Route{
-		Path:    "/user/transportoperators",
-		Method:  http.MethodGet,
-		Handler: api.GetTransportOperators,
-		Roles:   []int{constant.ROLE_DRIVER},
-	})
-	r.Add(&router.Route{
 		Path:    "/user/transportoperator/apply",
 		Method:  http.MethodPost,
 		Handler: api.TransportOperatorApply,

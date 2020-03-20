@@ -11,7 +11,6 @@ import (
 	"github.com/chadhao/logit/modules/user/response"
 	"github.com/chadhao/logit/utils"
 	"github.com/labstack/echo/v4"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -74,7 +73,6 @@ func GetUserInfo(c echo.Context) error {
 	var (
 		user   = &model.User{ID: uid}
 		driver = &model.Driver{}
-		tos    = []*model.TransportOperator{}
 	)
 
 	if err := user.Find(); err != nil {
@@ -86,14 +84,19 @@ func GetUserInfo(c echo.Context) error {
 		driver.ID = uid
 		driver.Find()
 	}
-	if roles.Is(constant.ROLE_TO_SUPER) {
-		to := &model.TransportOperator{ID: uid}
-		to.Find()
-		tos = append(tos, to)
-	}
 
+	toFilter := model.TransportOperatorFilter{
+		DriverID: uid,
+		SuperID:  uid,
+		AdminID:  uid,
+	}
+	drivers, supers, admins, err := toFilter.FindTransportOperatorsRelatedToUser()
+	if err != nil {
+		return err
+	}
 	resp := response.UserInfoResponse{}
-	resp.Format(user, driver, tos)
+	resp.AddToInfo(drivers, supers, admins)
+	resp.Format(user, driver)
 
 	return c.JSON(http.StatusOK, resp)
 }
@@ -261,33 +264,18 @@ func TransportOperatorApply(c echo.Context) error {
 	return c.JSON(http.StatusOK, "ok")
 }
 
-func GetTransportOperators(c echo.Context) error {
-	r := struct {
-		DriverID primitive.ObjectID `json:"driverID" query:"driverID"`
-		Name     string             `json:"name" query:"name"`
-	}{}
-
-	if err := c.Bind(&r); err != nil {
-		return err
-	}
-	filter := bson.M{}
-	uid, _ := c.Get("user").(primitive.ObjectID)
-	if !r.DriverID.IsZero() {
-		if r.DriverID != uid {
-			return errors.New("no authorization")
-		}
-		filter["driverIDs"] = r.DriverID
-	} else {
-		filter["name"] = bson.M{"$regex": "(?i)" + r.Name}
-	}
-	tos, err := model.FindTransportOperatorsByDriverID(filter)
-	if err != nil {
-		return err
-	}
-
-	tosResp := response.TransportOperatorInfoFormat(tos)
-	return c.JSON(http.StatusOK, tosResp)
-}
+// func GetTransportOperators(c echo.Context) error {
+// 	r := model.TransportOperatorFilter{}
+// 	if err := c.Bind(&r); err != nil {
+// 		return err
+// 	}
+// 	tos, err := r.Find()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	tosResp := response.TransportOperatorInfoFormat(tos)
+// 	return c.JSON(http.StatusOK, tosResp)
+// }
 
 func GetVerification(c echo.Context) error {
 	vr := request.VerificationRequest{}
