@@ -1,8 +1,10 @@
 package model
 
 import (
-	"log"
 	"strings"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/sns"
 )
 
 // Txt 电话短信
@@ -24,12 +26,12 @@ func (t *Txt) Send() error {
 		return err
 	}
 
-	log.Println(t)
-	// params := &sns.PublishInput{
-	// 	PhoneNumber: aws.String(t.Number),
-	// 	Message:     aws.String(t.Message),
-	// }
+	// log.Println(t)
+	params := &sns.PublishInput{
+		PhoneNumber: aws.String(t.Number),
+		Message:     aws.String(t.Message),
+	}
 
-	// _, err := awsSNS.Publish(params)
-	return nil
+	_, err := awsSNS.Publish(params)
+	return err
 }
