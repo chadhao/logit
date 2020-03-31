@@ -132,7 +132,7 @@ func (reqAddR *reqAddRecord) valid() error {
 		return errors.New("time is required")
 	}
 	if math.Abs(reqAddR.Time.Sub(time.Now()).Seconds()) > 10 {
-		return errors.New("client time is not standard time")
+		return errors.New("time and system time conflict")
 	}
 
 	// 2. 若公里数不为空时的检验
