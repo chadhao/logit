@@ -392,6 +392,34 @@ func VehicleDelete(c echo.Context) error {
 	return c.JSON(http.StatusOK, "deleted")
 }
 
+func VehicleGet(c echo.Context) error {
+
+	vr := struct {
+		ID string `json:"id" query:"id"`
+	}{}
+	if err := c.Bind(&vr); err != nil {
+		return err
+	}
+
+	uid, _ := c.Get("user").(primitive.ObjectID)
+	vid, err := primitive.ObjectIDFromHex(vr.ID)
+	if err != nil {
+		return err
+	}
+
+	vehicle := &model.Vehicle{
+		ID: vid,
+	}
+	if err := vehicle.Find(); err != nil {
+		return err
+	}
+	if vehicle.DriverID != uid {
+		return errors.New("no authorization")
+	}
+
+	return c.JSON(http.StatusOK, vehicle)
+}
+
 func GetVehicles(c echo.Context) error {
 	vr := struct {
 		DriverID string `json:"driverID" query:"driverID"`
