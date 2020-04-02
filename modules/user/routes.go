@@ -97,6 +97,12 @@ func loadRoutes(r router.Router) {
 		Roles:   []int{constant.ROLE_DRIVER},
 	})
 	r.Add(&router.Route{
+		Path:    "/user/vehicle",
+		Method:  http.MethodGet,
+		Handler: api.VehicleGet,
+		Roles:   []int{constant.ROLE_DRIVER},
+	})
+	r.Add(&router.Route{
 		Path:    "/user/vehicles",
 		Method:  http.MethodGet,
 		Handler: api.GetVehicles,
