@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"errors"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -69,39 +70,40 @@ func (t *TransportOperator) Find() error {
 	return nil
 }
 
-func (t *TransportOperator) AddDriver(driverID primitive.ObjectID) error {
-	t.DriverIDs = append(t.DriverIDs, driverID)
-	update := bson.M{"$set": bson.M{"driverIDs": t.DriverIDs}}
-	_, err := db.Collection("transportOperator").UpdateOne(context.TODO(), bson.M{"_id": t.ID}, update)
-	return err
+func (t *TransportOperator) Update() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	filter := bson.D{{"_id", t.ID}}
+	tBson, err := bson.Marshal(t)
+	if err != nil {
+		return err
+	}
+
+	result, err := db.Collection("transportOperator").ReplaceOne(ctx, filter, tBson)
+	if err != nil {
+		return nil
+	}
+	if result.MatchedCount != 1 {
+		return errors.New("transportOperator not updated")
+	}
+	return nil
 }
 
-type TransportOperatorFilter struct {
-	DriverID primitive.ObjectID `json:"driverID"`
-	SuperID  primitive.ObjectID `json:"superID"`
-	AdminID  primitive.ObjectID `json:"adminID"`
-	Name     string             `json:"name"`
-}
-
-func (f *TransportOperatorFilter) Find() ([]TransportOperator, error) {
+func (f *TransportOperator) Filter(notVerifiedInclude bool) ([]TransportOperator, error) {
 
 	tos := []TransportOperator{}
 
-	filter := bson.M{
-		// "isVerified": true,
+	filter := bson.M{}
+	if !notVerifiedInclude {
+		filter["isVerified"] = true
 	}
 
 	switch {
-	case !f.DriverID.IsZero():
-		filter["driverIDs"] = f.DriverID
-	case !f.SuperID.IsZero():
-		filter["superIDs"] = f.SuperID
-	case !f.AdminID.IsZero():
-		filter["adminIDs"] = f.AdminID
+	case len(f.LicenseNumber) > 0:
+		filter["licenseNumber"] = bson.M{"$regex": "(?i)" + f.LicenseNumber}
 	case len(f.Name) > 0:
 		filter["name"] = bson.M{"$regex": "(?i)" + f.Name}
-	default:
-		return nil, errors.New("filter field is required")
 	}
 
 	cursor, err := db.Collection("transportOperator").Find(context.TODO(), filter)
@@ -114,43 +116,134 @@ func (f *TransportOperatorFilter) Find() ([]TransportOperator, error) {
 	return tos, nil
 }
 
-func (f *TransportOperatorFilter) FindTransportOperatorsRelatedToUser() (drivers []TransportOperator, supers []TransportOperator, admins []TransportOperator, err error) {
+func (t *TransportOperator) AddIdentity(userID primitive.ObjectID, identity TOIdentity, contact string) (*TransportOperatorIdentity, error) {
 
-	drivers = []TransportOperator{}
-	supers = []TransportOperator{}
-	admins = []TransportOperator{}
+	toI := &TransportOperatorIdentity{
+		ID:                  primitive.NewObjectID(),
+		TransportOperatorID: t.ID,
+		CreatedAt:           time.Now(),
+	}
+
+	switch {
+	case !t.IsVerified:
+		return nil, errors.New("transport operator need to be verified")
+	case t.IsCompany:
+		if contact == "" && identity != TO_DRIVER {
+			return nil, errors.New("contact is required")
+		}
+		toI.Contact = &contact
+	case !t.IsCompany:
+		tos, err := toI.Filter()
+		if len(tos) > 0 {
+			return nil, errors.New("can only have one super")
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	toI.UserID = userID
+	toI.Identity = identity
+
+	if err := toI.create(); err != nil {
+		return nil, err
+	}
+	return toI, nil
+}
+
+func (t *TransportOperatorIdentity) Filter() ([]TransportOperatorIdentity, error) {
+	tos := []TransportOperatorIdentity{}
+	filter := bson.M{}
+	if !t.UserID.IsZero() {
+		filter["userID"] = t.UserID
+	}
+	if !t.TransportOperatorID.IsZero() {
+		filter["transportOperatorID"] = t.TransportOperatorID
+	}
+	if t.Identity != "" {
+		filter["identity"] = t.Identity
+	}
+
+	cursor, err := db.Collection("transportOperatorIdentity").Find(context.TODO(), filter)
+	if err != nil {
+		return nil, err
+	}
+	if err = cursor.All(context.TODO(), &tos); err != nil {
+		return nil, err
+	}
+	return tos, nil
+}
+
+func (t *TransportOperatorIdentity) Find() error {
+	err := db.Collection("transportOperatorIdentity").FindOne(context.TODO(), bson.M{"_id": t.ID}).Decode(t)
+	return err
+}
+
+func (t *TransportOperatorIdentity) UpdateContact(contact string) error {
+	update := bson.M{"$set": bson.M{"contact": contact}}
+	_, err := db.Collection("transportOperatorIdentity").UpdateOne(context.TODO(), bson.M{"_id": t.ID}, update)
+	return err
+}
+
+func IsIdentity(uid, transportOperatorID primitive.ObjectID, identities []TOIdentity) bool {
 
 	filter := bson.M{
-		"driverIDs": f.DriverID,
-	}
-	cursor, err := db.Collection("transportOperator").Find(context.TODO(), filter)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	if err = cursor.All(context.TODO(), &drivers); err != nil {
-		return nil, nil, nil, err
+		"userID":              uid,
+		"transportOperatorID": transportOperatorID,
+		"identity":            bson.M{"$in": identities},
 	}
 
-	filter = bson.M{
-		"superIDs": f.SuperID,
+	if count, _ := db.Collection("transportOperatorIdentity").CountDocuments(context.TODO(), filter); count > 0 {
+		return true
 	}
-	cursor, err = db.Collection("transportOperator").Find(context.TODO(), filter)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	if err = cursor.All(context.TODO(), &supers); err != nil {
-		return nil, nil, nil, err
+	return false
+}
+
+func (t *TransportOperatorIdentity) create() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if t.exists() {
+		return errors.New("This identity exists")
 	}
 
-	filter = bson.M{
-		"adminIDs": f.AdminID,
-	}
-	cursor, err = db.Collection("transportOperator").Find(context.TODO(), filter)
+	toBson, err := bson.Marshal(t)
 	if err != nil {
-		return nil, nil, nil, err
+		return err
 	}
-	if err = cursor.All(context.TODO(), &admins); err != nil {
-		return nil, nil, nil, err
+
+	if _, err := db.Collection("transportOperatorIdentity").InsertOne(ctx, toBson); err != nil {
+		return err
 	}
-	return drivers, supers, admins, nil
+
+	return nil
+}
+
+func (t *TransportOperatorIdentity) Delete() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if _, err := db.Collection("transportOperatorIdentity").DeleteOne(ctx, bson.M{"_id": t.ID}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *TransportOperatorIdentity) exists() bool {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	conditions := primitive.A{
+		bson.D{{"userID", t.UserID}},
+		bson.D{{"transportOperatorID", t.TransportOperatorID}},
+		bson.D{{"identity", t.Identity}},
+		bson.D{{"deletedAt", nil}},
+	}
+
+	filter := bson.D{{"$and", conditions}}
+
+	if count, _ := db.Collection("transportOperatorIdentity").CountDocuments(ctx, filter); count > 0 {
+		return true
+	}
+
+	return false
 }

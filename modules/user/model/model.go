@@ -29,13 +29,12 @@ type (
 	}
 
 	Driver struct {
-		ID                   primitive.ObjectID   `json:"id" bson:"_id"`
-		TransportOperatorIDs []primitive.ObjectID `json:"transportOperatorIDs" bson:"transportOperatorIDs"`
-		LicenseNumber        string               `json:"licenseNumber" bson:"licenseNumber"`
-		DateOfBirth          time.Time            `json:"dateOfBirth" bson:"dateOfBirth"`
-		Firstnames           string               `json:"firstnames" bson:"firstnames"`
-		Surname              string               `json:"surname" bson:"surname"`
-		CreatedAt            time.Time            `json:"createdAt" bson:"createdAt"`
+		ID            primitive.ObjectID `json:"id" bson:"_id"`
+		LicenseNumber string             `json:"licenseNumber" bson:"licenseNumber"`
+		DateOfBirth   time.Time          `json:"dateOfBirth" bson:"dateOfBirth"`
+		Firstnames    string             `json:"firstnames" bson:"firstnames"`
+		Surname       string             `json:"surname" bson:"surname"`
+		CreatedAt     time.Time          `json:"createdAt" bson:"createdAt"`
 	}
 
 	Vehicle struct {
@@ -47,13 +46,34 @@ type (
 	}
 
 	TransportOperator struct {
-		ID            primitive.ObjectID   `json:"id" bson:"_id"`
-		DriverIDs     []primitive.ObjectID `json:"driverIDs" bson:"driverIDs"`
-		SuperIDs      []primitive.ObjectID `json:"superIDs" bson:"superIDs"`
-		AdminIDs      []primitive.ObjectID `json:"adminIDs" bson:"adminIDs"`
-		LicenseNumber string               `json:"licenseNumber" bson:"licenseNumber"`
-		Name          string               `json:"name" bson:"name"`
-		IsVerified    bool                 `json:"isVerified" bson:"isVerified"`
-		CreatedAt     time.Time            `json:"createdAt" bson:"createdAt"`
+		ID            primitive.ObjectID `json:"id" bson:"_id"`
+		LicenseNumber string             `json:"licenseNumber" bson:"licenseNumber"`
+		Name          string             `json:"name" bson:"name"`
+		IsVerified    bool               `json:"isVerified" bson:"isVerified"`
+		IsCompany     bool               `json:"isCompany" bson:"isCompany"`
+		CreatedAt     time.Time          `json:"createdAt" bson:"createdAt"`
 	}
+
+	TransportOperatorIdentity struct {
+		ID                  primitive.ObjectID `json:"id" bson:"_id"`
+		UserID              primitive.ObjectID `json:"userID" bson:"userID"`
+		TransportOperatorID primitive.ObjectID `json:"transportOperatorID" bson:"transportOperatorID"`
+		Identity            TOIdentity         `json:"identity" bson:"identity"`
+		Contact             *string            `json:"contact" bson:"contact"`
+		CreatedAt           time.Time          `json:"createdAt" bson:"createdAt"`
+	}
+)
+
+type (
+	// TOIdentity transport operator identity
+	TOIdentity string
+)
+
+const (
+	// TO_ADMIN admin
+	TO_ADMIN TOIdentity = "to_admin"
+	// TO_SUPER super
+	TO_SUPER TOIdentity = "to_super"
+	// TO_DRIVER driver
+	TO_DRIVER TOIdentity = "to_driver"
 )

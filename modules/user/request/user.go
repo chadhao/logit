@@ -29,7 +29,21 @@ type (
 	TransportOperatorRegRequest struct {
 		ID            primitive.ObjectID `json:"id"`
 		LicenseNumber string             `json:"licenseNumber"`
+		IsCompany     bool               `json:"isCompany"`
 		Name          string             `json:"name"`
+		Contact       string             `json:"contact"`
+	}
+	TransportOperatorUpdateRequest struct {
+		ID            primitive.ObjectID `json:"id"`
+		LicenseNumber string             `json:"licenseNumber"`
+		Name          string             `json:"name"`
+		IsVerified    bool               `json:"isVerified"`
+	}
+	TransportOperatorAddIdentityRequest struct {
+		TransportOperatorID primitive.ObjectID `json:"transportOperatorID"`
+		UserID              primitive.ObjectID `json:"userID"`
+		Identity            model.TOIdentity   `json:"identity"`
+		Contact             string             `json:"contact"`
 	}
 )
 
@@ -77,14 +91,14 @@ func (r *DriverRegRequest) Reg() (*model.Driver, error) {
 	return &d, nil
 }
 
-func (r *TransportOperatorRegRequest) Reg() (*model.TransportOperator, error) {
+func (r *TransportOperatorRegRequest) Reg(uid primitive.ObjectID) (*model.TransportOperator, error) {
 	// Should add Request content validation here
 	d := model.TransportOperator{
-		ID:            r.ID,
+		ID:            primitive.NewObjectID(),
 		LicenseNumber: r.LicenseNumber,
 		Name:          r.Name,
 		IsVerified:    false,
-		SuperIDs:      []primitive.ObjectID{r.ID},
+		IsCompany:     r.IsCompany,
 		CreatedAt:     time.Now(),
 	}
 
@@ -92,7 +106,52 @@ func (r *TransportOperatorRegRequest) Reg() (*model.TransportOperator, error) {
 		return nil, err
 	}
 
+	_, err := d.AddIdentity(uid, model.TO_SUPER, r.Contact)
+	if err != nil {
+		return nil, err
+	}
 	return &d, nil
+}
+
+func (r *TransportOperatorUpdateRequest) Update() (*model.TransportOperator, error) {
+	d := model.TransportOperator{
+		ID: r.ID,
+	}
+
+	if err := d.Find(); err != nil {
+		return nil, err
+	}
+
+	if r.IsVerified {
+		d.IsVerified = true
+	}
+	if r.LicenseNumber != "" {
+		d.LicenseNumber = r.LicenseNumber
+	}
+	if r.Name != "" {
+		d.Name = r.Name
+	}
+
+	if err := d.Update(); err != nil {
+		return nil, err
+	}
+	return &d, nil
+}
+
+func (r *TransportOperatorAddIdentityRequest) Add() (*model.TransportOperatorIdentity, error) {
+	d := model.TransportOperator{
+		ID: r.TransportOperatorID,
+	}
+
+	if err := d.Find(); err != nil {
+		return nil, err
+	}
+
+	identity, err := d.AddIdentity(r.UserID, r.Identity, r.Contact)
+	if err != nil {
+		return nil, err
+	}
+	return identity, nil
 }
 
 func (r *UserUpdateRequest) Replace(user *model.User) (err error) {

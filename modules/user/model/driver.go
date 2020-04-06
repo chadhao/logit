@@ -68,3 +68,16 @@ func (d *Driver) Find() error {
 
 	return nil
 }
+
+func GetDrivers(driverIDs []primitive.ObjectID) ([]Driver, error) {
+	drivers := []Driver{}
+
+	cursor, err := db.Collection("driver").Find(context.TODO(), bson.M{"_id": bson.M{"$in": driverIDs}})
+	if err != nil {
+		return nil, err
+	}
+	if err = cursor.All(context.TODO(), &drivers); err != nil {
+		return nil, err
+	}
+	return drivers, nil
+}
