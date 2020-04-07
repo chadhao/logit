@@ -116,7 +116,7 @@ func (f *TransportOperator) Filter(notVerifiedInclude bool) ([]TransportOperator
 	return tos, nil
 }
 
-func (t *TransportOperator) AddIdentity(userID primitive.ObjectID, identity TOIdentity, contact string) (*TransportOperatorIdentity, error) {
+func (t *TransportOperator) AddIdentity(userID primitive.ObjectID, identity TOIdentity, contact *string) (*TransportOperatorIdentity, error) {
 
 	toI := &TransportOperatorIdentity{
 		ID:                  primitive.NewObjectID(),
@@ -126,15 +126,21 @@ func (t *TransportOperator) AddIdentity(userID primitive.ObjectID, identity TOId
 
 	switch {
 	case !t.IsVerified:
-		return nil, errors.New("transport operator need to be verified")
+		tos, err := toI.Filter()
+		if len(tos) != 0 {
+			return nil, errors.New("transport operator need to be verified")
+		}
+		if err != nil {
+			return nil, err
+		}
 	case t.IsCompany:
-		if contact == "" && identity != TO_DRIVER {
+		if contact == nil && identity != TO_DRIVER {
 			return nil, errors.New("contact is required")
 		}
-		toI.Contact = &contact
+		toI.Contact = contact
 	case !t.IsCompany:
 		tos, err := toI.Filter()
-		if len(tos) > 0 {
+		if len(tos) > 1 {
 			return nil, errors.New("can only have one super")
 		}
 		if err != nil {

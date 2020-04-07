@@ -68,7 +68,7 @@ func TransportOperatorApply(c echo.Context) error {
 	}
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
-	identity, err := to.AddIdentity(uid, model.TO_DRIVER, "")
+	identity, err := to.AddIdentity(uid, model.TO_DRIVER, nil)
 	if err != nil {
 		return err
 	}
@@ -139,6 +139,7 @@ func TransportOperatorAddIdentity(c echo.Context) error {
 }
 
 func TransportOperatorRemoveIdentity(c echo.Context) error {
+	// TODO ... 删除后需要检查角色的role是否需要更新
 	r := struct {
 		TransportOperatorIdentityID string `json:"id" query:"id"`
 	}{}

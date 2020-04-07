@@ -31,7 +31,7 @@ type (
 		LicenseNumber string             `json:"licenseNumber"`
 		IsCompany     bool               `json:"isCompany"`
 		Name          string             `json:"name"`
-		Contact       string             `json:"contact"`
+		Contact       *string            `json:"contact,omitempty"`
 	}
 	TransportOperatorUpdateRequest struct {
 		ID            primitive.ObjectID `json:"id"`
@@ -43,7 +43,7 @@ type (
 		TransportOperatorID primitive.ObjectID `json:"transportOperatorID"`
 		UserID              primitive.ObjectID `json:"userID"`
 		Identity            model.TOIdentity   `json:"identity"`
-		Contact             string             `json:"contact"`
+		Contact             *string            `json:"contact,omitempty"`
 	}
 )
 
