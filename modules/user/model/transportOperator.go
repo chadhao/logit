@@ -205,6 +205,41 @@ func IsIdentity(uid, transportOperatorID primitive.ObjectID, identities []TOIden
 	return false
 }
 
+func HasAccessTo(adminIDPlus, driverID, transportOperatorID primitive.ObjectID) bool {
+	adminTos := []TransportOperatorIdentity{}
+	adminFilter := bson.M{
+		"userID":              adminIDPlus,
+		"transportOperatorID": transportOperatorID,
+		"identity":            bson.M{"$in": []TOIdentity{TO_ADMIN, TO_SUPER}},
+	}
+	cursor, err := db.Collection("transportOperatorIdentity").Find(context.TODO(), adminFilter)
+	if err != nil {
+		return false
+	}
+	if err = cursor.All(context.TODO(), &adminTos); err != nil {
+		return false
+	}
+
+	driverTos := []TransportOperatorIdentity{}
+	driverFilter := bson.M{
+		"userID":              driverID,
+		"transportOperatorID": transportOperatorID,
+		"identity":            TO_DRIVER,
+	}
+	cursor, err = db.Collection("transportOperatorIdentity").Find(context.TODO(), driverFilter)
+	if err != nil {
+		return false
+	}
+	if err = cursor.All(context.TODO(), &driverTos); err != nil {
+		return false
+	}
+
+	if len(adminTos) > 0 && len(driverTos) > 0 {
+		return true
+	}
+	return false
+}
+
 func (t *TransportOperatorIdentity) create() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

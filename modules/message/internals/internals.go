@@ -1,4 +1,4 @@
-package api
+package internals
 
 import "github.com/chadhao/logit/modules/message/model"
 

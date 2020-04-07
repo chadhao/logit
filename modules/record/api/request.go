@@ -13,9 +13,10 @@ import (
 
 // reqRecords 请求获取记录
 type reqRecords struct {
-	DriverID string    `query:"driverID" valid:"required"`
-	From     time.Time `query:"from" valid:"required"`
-	To       time.Time `query:"to" valid:"optional"`
+	DriverID            string    `query:"driverID" valid:"required"`
+	From                time.Time `query:"from" valid:"required"`
+	To                  time.Time `query:"to" valid:"optional"`
+	TransportOperatorID string    `query:"transportOperatorID" valid:"-"` // To required
 }
 
 func (reqR *reqRecords) valid() error {

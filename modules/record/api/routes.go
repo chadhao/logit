@@ -34,6 +34,12 @@ func LoadRoutes(r router.Router) {
 		Roles:   []int{constant.ROLE_DRIVER},
 	})
 	r.Add(&router.Route{
+		Path:    "/to/records",
+		Method:  http.MethodGet,
+		Handler: toGetRecords,
+		Roles:   []int{constant.ROLE_TO_ADMIN, constant.ROLE_TO_SUPER},
+	})
+	r.Add(&router.Route{
 		Path:    "/record/note",
 		Method:  http.MethodPost,
 		Handler: addNote,

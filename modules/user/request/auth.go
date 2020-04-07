@@ -6,7 +6,7 @@ import (
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/chadhao/logit/config"
-	msgApi "github.com/chadhao/logit/modules/message/api"
+	msgApi "github.com/chadhao/logit/modules/message/internals"
 
 	"github.com/chadhao/logit/modules/user/constant"
 	"github.com/chadhao/logit/modules/user/model"

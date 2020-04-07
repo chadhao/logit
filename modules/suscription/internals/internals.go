@@ -1,10 +1,11 @@
-package api
+package internals
 
-import "github.com/chadhao/logit/modules/suscription/model"
+import (
+	"time"
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
-
-import "time"
+	"github.com/chadhao/logit/modules/suscription/model"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 // CreateSuscription 创建用户订阅信息
 func CreateSuscription(driverID primitive.ObjectID, renew bool) error {

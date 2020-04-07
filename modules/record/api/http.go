@@ -6,19 +6,13 @@ import (
 	"sort"
 
 	"github.com/chadhao/logit/modules/record/model"
-	"github.com/chadhao/logit/modules/user/constant"
-	"github.com/chadhao/logit/utils"
+	userApi "github.com/chadhao/logit/modules/user/internals"
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // addRecord 添加一条新的记录
 func addRecord(c echo.Context) error {
-
-	roles := utils.RolesAssert(c.Get("roles"))
-	if !roles.Is(constant.ROLE_DRIVER) {
-		return errors.New("not driver")
-	}
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
 
@@ -39,11 +33,6 @@ func addRecord(c echo.Context) error {
 
 // getLatestRecord 获取上一条记录
 func getLatestRecord(c echo.Context) error {
-
-	roles := utils.RolesAssert(c.Get("roles"))
-	if !roles.Is(constant.ROLE_DRIVER) {
-		return errors.New("not driver")
-	}
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
 
@@ -68,10 +57,10 @@ func getLatestRecord(c echo.Context) error {
 // deleteLatestRecord 删除上一条记录
 func deleteLatestRecord(c echo.Context) error {
 
-	roles := utils.RolesAssert(c.Get("roles"))
-	if !roles.Is(constant.ROLE_DRIVER) {
-		return errors.New("not driver")
-	}
+	// roles := utils.RolesAssert(c.Get("roles"))
+	// if !roles.Is(constant.ROLE_DRIVER) {
+	// 	return errors.New("not driver")
+	// }
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
 
@@ -96,15 +85,8 @@ func getRecords(c echo.Context) error {
 	}
 	uid, _ := c.Get("user").(primitive.ObjectID)
 
-	roles := utils.RolesAssert(c.Get("roles"))
-	switch {
-	case roles.Is(constant.ROLE_ADMIN):
-	case roles.Is(constant.ROLE_DRIVER):
-		if req.DriverID != uid.Hex() {
-			return errors.New("no authorization")
-		}
-	default:
-		return errors.New("not allowed")
+	if req.DriverID != uid.Hex() {
+		return errors.New("no authorization")
 	}
 
 	records, err := req.getRecords()
@@ -123,16 +105,8 @@ func addNote(c echo.Context) error {
 	}
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
-
-	roles := utils.RolesAssert(c.Get("roles"))
-	switch {
-	case roles.Is(constant.ROLE_ADMIN):
-	case roles.Is(constant.ROLE_DRIVER):
-		if !req.isDriversRecord(uid) {
-			return errors.New("no authorization")
-		}
-	default:
-		return errors.New("not allowed")
+	if !req.isDriversRecord(uid) {
+		return errors.New("no authorization")
 	}
 
 	var (
@@ -170,11 +144,6 @@ func addNote(c echo.Context) error {
 // 1. 对records按照时间排序，检查相邻两条之间的时间位置是否准确
 // 2. 批量更新入数据库
 func offlineSyncRecords(c echo.Context) error {
-	roles := utils.RolesAssert(c.Get("roles"))
-	if !roles.Is(constant.ROLE_DRIVER) {
-		return errors.New("not driver")
-	}
-
 	uid, _ := c.Get("user").(primitive.ObjectID)
 
 	reqs := []reqAddRecord{}
@@ -204,4 +173,37 @@ func offlineSyncRecords(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, records)
 
+}
+
+// Transport operator 权限下的record操作
+// toGetRecords 获取记录
+func toGetRecords(c echo.Context) error {
+
+	req := new(reqRecords)
+	if err := c.Bind(req); err != nil {
+		return err
+	}
+
+	var (
+		uid primitive.ObjectID
+		did primitive.ObjectID
+		tid primitive.ObjectID
+		err error
+	)
+	uid, _ = c.Get("user").(primitive.ObjectID)
+	did, err = primitive.ObjectIDFromHex(req.DriverID)
+	tid, err = primitive.ObjectIDFromHex(req.TransportOperatorID)
+	if err != nil {
+		return err
+	}
+
+	if !userApi.HasAccessTo(uid, did, tid) {
+		return errors.New("no authorization")
+	}
+
+	records, err := req.getRecords()
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, records)
 }
