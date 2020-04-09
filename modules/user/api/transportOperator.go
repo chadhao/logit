@@ -76,6 +76,15 @@ func TransportOperatorApply(c echo.Context) error {
 	return c.JSON(http.StatusOK, identity)
 }
 
+func GetTransportOperators(c echo.Context) error {
+	to := &model.TransportOperator{}
+	tos, err := to.Filter(false)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, tos)
+}
+
 func TransportOperatorUpdate(c echo.Context) error {
 	tr := request.TransportOperatorUpdateRequest{}
 
