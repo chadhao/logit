@@ -37,7 +37,6 @@ type (
 		ID            primitive.ObjectID `json:"id"`
 		LicenseNumber string             `json:"licenseNumber"`
 		Name          string             `json:"name"`
-		IsVerified    bool               `json:"isVerified"`
 	}
 	TransportOperatorAddIdentityRequest struct {
 		TransportOperatorID primitive.ObjectID `json:"transportOperatorID"`
@@ -122,9 +121,6 @@ func (r *TransportOperatorUpdateRequest) Update() (*model.TransportOperator, err
 		return nil, err
 	}
 
-	if r.IsVerified {
-		d.IsVerified = true
-	}
 	if r.LicenseNumber != "" {
 		d.LicenseNumber = r.LicenseNumber
 	}

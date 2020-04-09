@@ -182,3 +182,30 @@ func TransportOperatorRemoveIdentity(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, "ok")
 }
+
+func TransportOperatorVerify(c echo.Context) error {
+	r := struct {
+		TransportOperatorID string `json:"transportOperatorID"`
+	}{}
+
+	if err := c.Bind(&r); err != nil {
+		return err
+	}
+	toID, err := primitive.ObjectIDFromHex(r.TransportOperatorID)
+	if err != nil {
+		return err
+	}
+	to := &model.TransportOperator{
+		ID: toID,
+	}
+	if err := to.Find(); err != nil {
+		return err
+	}
+
+	to.IsVerified = true
+	if err := to.Update(); err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, "ok")
+}

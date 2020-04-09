@@ -95,6 +95,12 @@ func loadRoutes(r router.Router) {
 		Roles:   []int{constant.ROLE_TO_SUPER},
 	})
 	r.Add(&router.Route{
+		Path:    "/user/transportoperator/verify",
+		Method:  http.MethodPost,
+		Handler: api.TransportOperatorVerify,
+		Roles:   []int{constant.ROLE_SUPER, constant.ROLE_ADMIN},
+	})
+	r.Add(&router.Route{
 		Path:    "/user/code",
 		Method:  http.MethodPost,
 		Handler: api.GetVerification,
