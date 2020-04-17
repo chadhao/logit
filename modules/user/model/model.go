@@ -3,6 +3,7 @@ package model
 import (
 	"time"
 
+	"github.com/chadhao/logit/modules/user/constant"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -77,3 +78,16 @@ const (
 	// TO_DRIVER driver
 	TO_DRIVER TOIdentity = "to_driver"
 )
+
+func (t TOIdentity) GetRole() int {
+	identity := -1
+	switch {
+	case t == TO_SUPER:
+		identity = constant.ROLE_TO_SUPER
+	case t == TO_ADMIN:
+		identity = constant.ROLE_TO_ADMIN
+	case t == TO_DRIVER:
+		identity = constant.ROLE_DRIVER
+	}
+	return identity
+}

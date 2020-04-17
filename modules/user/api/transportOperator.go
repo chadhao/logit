@@ -148,7 +148,6 @@ func TransportOperatorAddIdentity(c echo.Context) error {
 }
 
 func TransportOperatorRemoveIdentity(c echo.Context) error {
-	// TODO ... 删除后需要检查角色的role是否需要更新
 	r := struct {
 		TransportOperatorIdentityID string `json:"id" query:"id"`
 	}{}
@@ -178,6 +177,30 @@ func TransportOperatorRemoveIdentity(c echo.Context) error {
 
 	if err := toi.Delete(); err != nil {
 		return err
+	}
+
+	// 删除后需要检查角色的role是否需要更新
+	newToi := model.TransportOperatorIdentity{
+		UserID:   toi.UserID,
+		Identity: toi.Identity,
+	}
+	newTois, _ := newToi.Filter()
+	if len(newTois) == 0 {
+		removeUser := &model.User{ID: toi.UserID}
+		if err := removeUser.Find(); err != nil {
+			return errors.New("cannot find user")
+		}
+		roles := utils.RolesAssert(removeUser.RoleIDs)
+		identity := toi.Identity.GetRole()
+		for i := 0; i < len(roles); i++ {
+			if roles[i] == identity {
+				roles = append(roles[:i], roles[i+1:]...)
+				if err := removeUser.Update(); err != nil {
+					return err
+				}
+				break
+			}
+		}
 	}
 
 	return c.JSON(http.StatusOK, "ok")
