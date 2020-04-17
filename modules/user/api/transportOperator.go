@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/chadhao/logit/config"
 	"github.com/chadhao/logit/modules/user/constant"
 	"github.com/chadhao/logit/modules/user/model"
 	"github.com/chadhao/logit/modules/user/request"
@@ -26,26 +25,27 @@ func TransportOperatorRegister(c echo.Context) error {
 		return errors.New("cannot find user")
 	}
 
-	// Assign transport operator super identity
 	if _, err := tr.Reg(uid); err != nil {
 		return err
 	}
 
-	if !utils.RolesAssert(user.RoleIDs).Is(constant.ROLE_TO_SUPER) {
-		// Update user role
-		user.RoleIDs = append(user.RoleIDs, constant.ROLE_TO_SUPER)
-		if err := user.Update(); err != nil {
-			return err
-		}
-	}
+	return c.JSON(http.StatusOK, "ok")
 
-	// Issue token
-	token, err := user.IssueToken(c.Get("config").(config.Config))
-	if err != nil {
-		return err
-	}
+	// if !utils.RolesAssert(user.RoleIDs).Is(constant.ROLE_TO_SUPER) {
+	// 	// Update user role
+	// 	user.RoleIDs = append(user.RoleIDs, constant.ROLE_TO_SUPER)
+	// 	if err := user.Update(); err != nil {
+	// 		return err
+	// 	}
+	// }
 
-	return c.JSON(http.StatusOK, token)
+	// // Issue token
+	// token, err := user.IssueToken(c.Get("config").(config.Config))
+	// if err != nil {
+	// 	return err
+	// }
+
+	// return c.JSON(http.StatusOK, token)
 }
 
 func TransportOperatorApply(c echo.Context) error {
@@ -205,6 +205,28 @@ func TransportOperatorVerify(c echo.Context) error {
 	to.IsVerified = true
 	if err := to.Update(); err != nil {
 		return err
+	}
+
+	toi := &model.TransportOperatorIdentity{
+		TransportOperatorID: to.ID,
+		Identity:            model.TO_SUPER,
+	}
+	tois, err := toi.Filter()
+	if err != nil || len(tois) != 1 {
+		return err
+	}
+
+	uid := tois[0].UserID
+	assignedUser := &model.User{ID: uid}
+	if err := assignedUser.Find(); err != nil {
+		return errors.New("cannot find user")
+	}
+	roles := utils.RolesAssert(assignedUser.RoleIDs)
+	if !roles.Is(constant.ROLE_TO_SUPER) {
+		assignedUser.RoleIDs = append(assignedUser.RoleIDs, constant.ROLE_TO_SUPER)
+		if err := assignedUser.Update(); err != nil {
+			return err
+		}
 	}
 
 	return c.JSON(http.StatusOK, "ok")
