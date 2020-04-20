@@ -77,8 +77,17 @@ func TransportOperatorApply(c echo.Context) error {
 }
 
 func GetTransportOperators(c echo.Context) error {
+	notVerifyInclude := true
+	if c.Request().Header.Get("X-LOGIT-ORIGIN") == "admin" {
+		roles := utils.RolesAssert(c.Get("roles"))
+		if roles.Are([]int{constant.ROLE_SUPER, constant.ROLE_ADMIN}) {
+			notVerifyInclude = false
+		}
+	}
+
 	to := &model.TransportOperator{}
-	tos, err := to.Filter(false)
+	tos, err := to.Filter(notVerifyInclude)
+
 	if err != nil {
 		return err
 	}
