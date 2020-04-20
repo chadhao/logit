@@ -1,5 +1,21 @@
 package utils
 
+import "github.com/labstack/echo/v4"
+
+const ROLES = "roles"
+
+// IsRole 用户是否是指定角色
+func IsRole(c echo.Context, role int) bool {
+	roles := RolesAssert(c.Get(ROLES))
+	return roles.Is(role)
+}
+
+// AreRoles 用户是否是指定角色的其中一个
+func AreRoles(c echo.Context, roles []int) bool {
+	r := RolesAssert(c.Get(ROLES))
+	return r.Are(roles)
+}
+
 // Roles 用户角色组
 type Roles []int
 

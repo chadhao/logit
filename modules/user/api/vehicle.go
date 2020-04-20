@@ -4,10 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/chadhao/logit/modules/user/constant"
 	"github.com/chadhao/logit/modules/user/model"
 	"github.com/chadhao/logit/modules/user/request"
-	"github.com/chadhao/logit/utils"
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -20,10 +18,6 @@ func VehicleCreate(c echo.Context) error {
 	}
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
-	roles := utils.RolesAssert(c.Get("roles"))
-	if !roles.Is(constant.ROLE_DRIVER) {
-		return errors.New("is not driver")
-	}
 
 	vr.DriverID = uid
 	vehicle, err := vr.Create()

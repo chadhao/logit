@@ -57,11 +57,6 @@ func getLatestRecord(c echo.Context) error {
 // deleteLatestRecord 删除上一条记录
 func deleteLatestRecord(c echo.Context) error {
 
-	// roles := utils.RolesAssert(c.Get("roles"))
-	// if !roles.Is(constant.ROLE_DRIVER) {
-	// 	return errors.New("not driver")
-	// }
-
 	uid, _ := c.Get("user").(primitive.ObjectID)
 
 	req := new(reqRecord)

@@ -134,7 +134,11 @@ func (r *TransportOperatorUpdateRequest) Update() (*model.TransportOperator, err
 	return &d, nil
 }
 
+// Add .
 func (r *TransportOperatorAddIdentityRequest) Add() (*model.TransportOperatorIdentity, error) {
+	if r.Identity != model.TO_SUPER && r.Identity != model.TO_ADMIN {
+		return nil, errors.New("identity not valid")
+	}
 	d := model.TransportOperator{
 		ID: r.TransportOperatorID,
 	}

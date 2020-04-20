@@ -13,6 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// DriverRegister 司机注册
 func DriverRegister(c echo.Context) error {
 	dr := request.DriverRegRequest{}
 
@@ -21,8 +22,7 @@ func DriverRegister(c echo.Context) error {
 	}
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
-	roles := utils.RolesAssert(c.Get("roles"))
-	if roles.Is(constant.ROLE_DRIVER) {
+	if utils.IsRole(c, constant.ROLE_DRIVER) {
 		return errors.New("is driver already")
 	}
 

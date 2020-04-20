@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/chadhao/logit/modules/user/constant"
 	"github.com/chadhao/logit/utils"
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -18,16 +17,12 @@ func getSuscription(c echo.Context) error {
 		return err
 	}
 
-	roles := utils.RolesAssert(c.Get("roles"))
-	switch {
-	case roles.Is(constant.ROLE_ADMIN):
-	case roles.Is(constant.ROLE_DRIVER):
+	// admin可以获取其它用户suscription, 个人只能获取自己的
+	if !utils.IsOrigin(c, utils.ADMIN) {
 		uid, _ := c.Get("user").(primitive.ObjectID)
 		if uid.Hex() != req.DriverID {
 			return errors.New("not authorized")
 		}
-	default:
-		return errors.New("not admin or driver")
 	}
 
 	s, err := req.getSuscription()

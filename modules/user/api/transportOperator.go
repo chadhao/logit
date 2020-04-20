@@ -30,22 +30,6 @@ func TransportOperatorRegister(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, "ok")
-
-	// if !utils.RolesAssert(user.RoleIDs).Is(constant.ROLE_TO_SUPER) {
-	// 	// Update user role
-	// 	user.RoleIDs = append(user.RoleIDs, constant.ROLE_TO_SUPER)
-	// 	if err := user.Update(); err != nil {
-	// 		return err
-	// 	}
-	// }
-
-	// // Issue token
-	// token, err := user.IssueToken(c.Get("config").(config.Config))
-	// if err != nil {
-	// 	return err
-	// }
-
-	// return c.JSON(http.StatusOK, token)
 }
 
 func TransportOperatorApply(c echo.Context) error {
@@ -76,13 +60,11 @@ func TransportOperatorApply(c echo.Context) error {
 	return c.JSON(http.StatusOK, identity)
 }
 
+// GetTransportOperators 获取tos
 func GetTransportOperators(c echo.Context) error {
 	notVerifyInclude := true
-	if c.Request().Header.Get("X-LOGIT-ORIGIN") == "admin" {
-		roles := utils.RolesAssert(c.Get("roles"))
-		if roles.Are([]int{constant.ROLE_SUPER, constant.ROLE_ADMIN}) {
-			notVerifyInclude = false
-		}
+	if utils.IsOrigin(c, utils.ADMIN) {
+		notVerifyInclude = false
 	}
 
 	to := &model.TransportOperator{}
@@ -117,6 +99,7 @@ func TransportOperatorUpdate(c echo.Context) error {
 	return c.JSON(http.StatusOK, to)
 }
 
+// TransportOperatorAddIdentity TO为用户添加TO_SUPER或TO_ADMIN
 func TransportOperatorAddIdentity(c echo.Context) error {
 	tr := request.TransportOperatorAddIdentityRequest{}
 

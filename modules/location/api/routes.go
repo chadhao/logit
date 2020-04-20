@@ -19,6 +19,6 @@ func LoadRoutes(r router.Router) {
 		Path:    "/location",
 		Method:  http.MethodGet,
 		Handler: getDrivingLocs,
-		Roles:   []int{constant.ROLE_SUPER},
+		Roles:   []int{constant.ROLE_SUPER, constant.ROLE_ADMIN},
 	})
 }

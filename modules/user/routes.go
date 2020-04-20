@@ -62,7 +62,7 @@ func loadRoutes(r router.Router) {
 		Path:    "/user/transportoperators",
 		Method:  http.MethodGet,
 		Handler: api.GetTransportOperators,
-		Roles:   []int{},
+		Roles:   []int{constant.ROLE_DRIVER, constant.ROLE_SUPER, constant.ROLE_ADMIN},
 	})
 	r.Add(&router.Route{
 		Path:    "/user/transportoperator/drivers",
