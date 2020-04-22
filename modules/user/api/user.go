@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/chadhao/logit/config"
@@ -181,6 +182,13 @@ func UserQuery(c echo.Context) error {
 		return err
 	}
 
+	if len(ur.Phone) > 0 && len(ur.Phone) < 4 {
+		return errors.New("phone number need to be more specific")
+	}
+	if len(ur.Email) > 0 && len(ur.Email) < 4 {
+		return errors.New("email need to be more specific")
+	}
+
 	userFilter := model.User{
 		Phone: ur.Phone,
 		Email: ur.Email,
@@ -191,5 +199,32 @@ func UserQuery(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, users)
+	uids := []primitive.ObjectID{}
+	for _, v := range users {
+		uids = append(uids, v.ID)
+	}
+	driversMap := make(map[primitive.ObjectID]model.Driver)
+	drivers, _ := model.GetDrivers(uids)
+	for _, driver := range drivers {
+		driversMap[driver.ID] = driver
+	}
+
+	identitiesMap := model.GetIdentitiesByUserIDs(uids)
+
+	type resp struct {
+		model.User
+		Driver     model.Driver                      `json:"driver"`
+		Identities []model.TransportOperatorIdentity `json:"identities"`
+	}
+	resps := []resp{}
+	for _, user := range users {
+		r := resp{
+			User:       user,
+			Driver:     driversMap[user.ID],
+			Identities: identitiesMap[user.ID],
+		}
+		resps = append(resps, r)
+	}
+
+	return c.JSON(http.StatusOK, resps)
 }

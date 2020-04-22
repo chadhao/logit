@@ -288,3 +288,19 @@ func (t *TransportOperatorIdentity) exists() bool {
 
 	return false
 }
+
+// GetIdentitiesByUserIDs 批量通过userIDs获取他们相关的identity信息
+func GetIdentitiesByUserIDs(uids []primitive.ObjectID) map[primitive.ObjectID][]TransportOperatorIdentity {
+	m := make(map[primitive.ObjectID][]TransportOperatorIdentity)
+	var tois []TransportOperatorIdentity
+	filter := bson.M{
+		"userID": bson.M{"$in": uids},
+	}
+	cursor, _ := db.Collection("transportOperatorIdentity").Find(context.TODO(), filter)
+	cursor.All(context.TODO(), &tois)
+
+	for _, toi := range tois {
+		m[toi.UserID] = append(m[toi.UserID], toi)
+	}
+	return m
+}
