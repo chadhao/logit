@@ -9,6 +9,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func (u *User) Create() error {
@@ -152,4 +153,31 @@ func (u *User) IssueToken(c conf.Config) (*Token, error) {
 	}
 
 	return token, nil
+}
+
+// Filter 按照条件检索user
+func (u *User) Filter() ([]User, error) {
+
+	users := []User{}
+
+	filter := bson.M{}
+	if len(u.Phone) > 0 {
+		filter["phone"] = primitive.Regex{Pattern: u.Phone, Options: "i"}
+	}
+	if len(u.Email) > 0 {
+		filter["email"] = primitive.Regex{Pattern: u.Email, Options: "i"}
+	}
+
+	projection := bson.D{
+		{"password", 0},
+		{"pin", 0},
+	}
+	cursor, err := db.Collection("user").Find(context.TODO(), filter, options.Find().SetProjection(projection))
+	if err != nil {
+		return nil, err
+	}
+	if err = cursor.All(context.TODO(), &users); err != nil {
+		return nil, err
+	}
+	return users, nil
 }

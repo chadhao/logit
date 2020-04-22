@@ -169,3 +169,27 @@ func ForgetPassword(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, "ok")
 }
+
+// UserQuery 根据条件查询用户
+func UserQuery(c echo.Context) error {
+	ur := struct {
+		Phone string `json:"phone"`
+		Email string `json:"email"`
+	}{}
+
+	if err := c.Bind(&ur); err != nil {
+		return err
+	}
+
+	userFilter := model.User{
+		Phone: ur.Phone,
+		Email: ur.Email,
+	}
+
+	users, err := userFilter.Filter()
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, users)
+}

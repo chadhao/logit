@@ -9,11 +9,7 @@ import (
 )
 
 func loadRoutes(r router.Router) {
-	// r.Add(&router.Route{
-	// 	Path:    "/user",
-	// 	Method:  http.MethodPost,
-	// 	Handler: api.UserEntry,
-	// })
+	// User
 	r.Add(&router.Route{
 		Path:    "/user/refresh",
 		Method:  http.MethodPost,
@@ -47,11 +43,41 @@ func loadRoutes(r router.Router) {
 		Roles:   []int{constant.ROLE_USER_DEFAULT},
 	})
 	r.Add(&router.Route{
+		Path:    "/user/code",
+		Method:  http.MethodPost,
+		Handler: api.GetVerification,
+	})
+	r.Add(&router.Route{
+		Path:    "/user/code/check",
+		Method:  http.MethodPost,
+		Handler: api.CheckVerificationCode,
+	})
+	r.Add(&router.Route{
+		Path:    "/email/verification",
+		Method:  http.MethodGet,
+		Handler: api.EmailVerify,
+	})
+	r.Add(&router.Route{
+		Path:    "/user/forgot",
+		Method:  http.MethodPost,
+		Handler: api.ForgetPassword,
+	})
+	r.Add(&router.Route{
+		Path:    "/user/users",
+		Method:  http.MethodPost,
+		Handler: api.UserQuery,
+		Roles:   []int{constant.ROLE_SUPER, constant.ROLE_ADMIN},
+	})
+
+	// Driver
+	r.Add(&router.Route{
 		Path:    "/user/driver",
 		Method:  http.MethodPost,
 		Handler: api.DriverRegister,
 		Roles:   []int{constant.ROLE_USER_DEFAULT},
 	})
+
+	// Transport Operator
 	r.Add(&router.Route{
 		Path:    "/user/transportoperator",
 		Method:  http.MethodPost,
@@ -100,26 +126,8 @@ func loadRoutes(r router.Router) {
 		Handler: api.TransportOperatorVerify,
 		Roles:   []int{constant.ROLE_SUPER, constant.ROLE_ADMIN},
 	})
-	r.Add(&router.Route{
-		Path:    "/user/code",
-		Method:  http.MethodPost,
-		Handler: api.GetVerification,
-	})
-	r.Add(&router.Route{
-		Path:    "/user/code/check",
-		Method:  http.MethodPost,
-		Handler: api.CheckVerificationCode,
-	})
-	r.Add(&router.Route{
-		Path:    "/email/verification",
-		Method:  http.MethodGet,
-		Handler: api.EmailVerify,
-	})
-	r.Add(&router.Route{
-		Path:    "/user/forgot",
-		Method:  http.MethodPost,
-		Handler: api.ForgetPassword,
-	})
+
+	// Vehicle
 	r.Add(&router.Route{
 		Path:    "/user/vehicle",
 		Method:  http.MethodPost,
