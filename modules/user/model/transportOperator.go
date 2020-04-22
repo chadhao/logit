@@ -99,11 +99,11 @@ func (f *TransportOperator) Filter(notVerifiedInclude bool) ([]TransportOperator
 		filter["isVerified"] = true
 	}
 
-	switch {
-	case len(f.LicenseNumber) > 0:
-		filter["licenseNumber"] = bson.M{"$regex": "(?i)" + f.LicenseNumber}
-	case len(f.Name) > 0:
-		filter["name"] = bson.M{"$regex": "(?i)" + f.Name}
+	if len(f.LicenseNumber) > 0 {
+		filter["licenseNumber"] = primitive.Regex{Pattern: f.LicenseNumber, Options: "i"}
+	}
+	if len(f.Name) > 0 {
+		filter["name"] = primitive.Regex{Pattern: f.Name, Options: "i"}
 	}
 
 	cursor, err := db.Collection("transportOperator").Find(context.TODO(), filter)
