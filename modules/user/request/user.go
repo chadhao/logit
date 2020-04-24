@@ -105,10 +105,19 @@ func (r *TransportOperatorRegRequest) Reg(uid primitive.ObjectID) (*model.Transp
 		return nil, err
 	}
 
-	_, err := d.AddIdentity(uid, model.TO_SUPER, r.Contact)
-	if err != nil {
+	if _, err := d.AddIdentity(uid, model.TO_SUPER, r.Contact); err != nil {
 		return nil, err
 	}
+	// 自雇性质注册时，当已经有driver信息时，自动添加为TO下driver
+	if !d.IsCompany {
+		driver := model.Driver{ID: uid}
+		if err := driver.Find(); err == nil {
+			if _, err := d.AddIdentity(uid, model.TO_DRIVER, nil); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	return &d, nil
 }
 
@@ -145,6 +154,9 @@ func (r *TransportOperatorAddIdentityRequest) Add() (*model.TransportOperatorIde
 
 	if err := d.Find(); err != nil {
 		return nil, err
+	}
+	if !d.IsCompany || !d.IsVerified {
+		return nil, errors.New("can only add identity to verified company")
 	}
 
 	identity, err := d.AddIdentity(r.UserID, r.Identity, r.Contact)

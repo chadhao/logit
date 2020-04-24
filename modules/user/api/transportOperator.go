@@ -62,13 +62,13 @@ func TransportOperatorApply(c echo.Context) error {
 
 // GetTransportOperators 获取tos
 func GetTransportOperators(c echo.Context) error {
-	notVerifyInclude := true
+	driverOrigin := true
 	if utils.IsOrigin(c, utils.ADMIN) {
-		notVerifyInclude = false
+		driverOrigin = false
 	}
 
 	to := &model.TransportOperator{}
-	tos, err := to.Filter(notVerifyInclude)
+	tos, err := to.Filter(driverOrigin)
 
 	if err != nil {
 		return err

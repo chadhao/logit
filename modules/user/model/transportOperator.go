@@ -90,13 +90,14 @@ func (t *TransportOperator) Update() error {
 	return nil
 }
 
-func (f *TransportOperator) Filter(notVerifiedInclude bool) ([]TransportOperator, error) {
+func (f *TransportOperator) Filter(driverOrigin bool) ([]TransportOperator, error) {
 
 	tos := []TransportOperator{}
 
 	filter := bson.M{}
-	if !notVerifiedInclude {
+	if driverOrigin {
 		filter["isVerified"] = true
+		filter["isCompany"] = true
 	}
 
 	if len(f.LicenseNumber) > 0 {
@@ -124,27 +125,36 @@ func (t *TransportOperator) AddIdentity(userID primitive.ObjectID, identity TOId
 		CreatedAt:           time.Now(),
 	}
 
-	switch {
-	case !t.IsVerified:
-		tos, err := toI.Filter()
-		if len(tos) != 0 {
-			return nil, errors.New("transport operator need to be verified")
-		}
-		if err != nil {
-			return nil, err
-		}
-	case t.IsCompany:
+	// to super, to admin 用户在公司情况下需要填入contact信息
+	if t.IsCompany {
 		if contact == nil && identity != TO_DRIVER {
 			return nil, errors.New("contact is required")
 		}
 		toI.Contact = contact
-	case !t.IsCompany:
-		tos, err := toI.Filter()
-		if len(tos) > 1 {
-			return nil, errors.New("can only have one super")
-		}
-		if err != nil {
-			return nil, err
+	} else { // 自雇形式
+		// 只能添加自己
+		// 添加为super, 只能存在一个super
+		if identity == TO_SUPER {
+			toI.Identity = TO_SUPER
+			if tos, _ := toI.Filter(); len(tos) >= 1 {
+				return nil, errors.New("can only have one super")
+			}
+		} else if identity == TO_DRIVER { // 只能将自己添加为driver
+			toI.Identity = TO_SUPER
+			tos, _ := toI.Filter()
+			if len(tos) == 0 {
+				return nil, errors.New("no super found")
+			}
+			if tos[0].UserID != userID {
+				return nil, errors.New("to super id and this id not match")
+			}
+
+			toI.Identity = TO_DRIVER
+			if tos, _ = toI.Filter(); len(tos) != 0 {
+				return nil, errors.New("has one driver already")
+			}
+		} else {
+			return nil, errors.New("identity can only be to super or driver")
 		}
 	}
 
