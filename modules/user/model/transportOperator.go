@@ -7,6 +7,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func (t *TransportOperator) Create() error {
@@ -167,8 +168,8 @@ func (t *TransportOperator) AddIdentity(userID primitive.ObjectID, identity TOId
 	return toI, nil
 }
 
-func (t *TransportOperatorIdentity) Filter() ([]TransportOperatorIdentity, error) {
-	tos := []TransportOperatorIdentity{}
+func (t *TransportOperatorIdentity) Filter() ([]TransportOperatorIdentityDetail, error) {
+	tos := []TransportOperatorIdentityDetail{}
 	filter := bson.M{}
 	if !t.UserID.IsZero() {
 		filter["userID"] = t.UserID
@@ -179,8 +180,23 @@ func (t *TransportOperatorIdentity) Filter() ([]TransportOperatorIdentity, error
 	if t.Identity != "" {
 		filter["identity"] = t.Identity
 	}
-
-	cursor, err := db.Collection("transportOperatorIdentity").Find(context.TODO(), filter)
+	query := mongo.Pipeline{
+		bson.D{
+			{"$lookup", bson.D{
+				{"from", "transportOperator"},
+				{"localField", "transportOperatorID"},
+				{"foreignField", "_id"},
+				{"as", "transportOperator"},
+			}},
+		},
+		bson.D{
+			{"$match", filter},
+		},
+		bson.D{
+			{"$unwind", "$transportOperator"},
+		},
+	}
+	cursor, err := db.Collection("transportOperatorIdentity").Aggregate(context.TODO(), query)
 	if err != nil {
 		return nil, err
 	}
@@ -300,17 +316,38 @@ func (t *TransportOperatorIdentity) exists() bool {
 }
 
 // GetIdentitiesByUserIDs 批量通过userIDs获取他们相关的identity信息
-func GetIdentitiesByUserIDs(uids []primitive.ObjectID) map[primitive.ObjectID][]TransportOperatorIdentity {
-	m := make(map[primitive.ObjectID][]TransportOperatorIdentity)
-	var tois []TransportOperatorIdentity
+func GetIdentitiesByUserIDs(uids []primitive.ObjectID) (map[primitive.ObjectID][]TransportOperatorIdentityDetail, error) {
+	m := make(map[primitive.ObjectID][]TransportOperatorIdentityDetail)
+	var tois []TransportOperatorIdentityDetail
 	filter := bson.M{
 		"userID": bson.M{"$in": uids},
 	}
-	cursor, _ := db.Collection("transportOperatorIdentity").Find(context.TODO(), filter)
-	cursor.All(context.TODO(), &tois)
 
+	query := mongo.Pipeline{
+		bson.D{
+			{"$lookup", bson.D{
+				{"from", "transportOperator"},
+				{"localField", "transportOperatorID"},
+				{"foreignField", "_id"},
+				{"as", "transportOperator"},
+			}},
+		},
+		bson.D{
+			{"$match", filter},
+		},
+		bson.D{
+			{"$unwind", "$transportOperator"},
+		},
+	}
+	cursor, err := db.Collection("transportOperatorIdentity").Aggregate(context.TODO(), query)
+	if err != nil {
+		return nil, err
+	}
+	if err = cursor.All(context.TODO(), &tois); err != nil {
+		return nil, err
+	}
 	for _, toi := range tois {
 		m[toi.UserID] = append(m[toi.UserID], toi)
 	}
-	return m
+	return m, nil
 }

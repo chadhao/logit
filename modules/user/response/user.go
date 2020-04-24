@@ -8,18 +8,18 @@ import (
 )
 
 type UserInfoResponse struct {
-	ID              primitive.ObjectID                `json:"id"`
-	Phone           string                            `json:"phone"`
-	Email           string                            `json:"email"`
-	IsEmailVerified bool                              `json:"isEmailVerified"`
-	IsDriver        bool                              `json:"isDriver"`
-	RoleIDs         []int                             `json:"roleIDs"`
-	CreatedAt       time.Time                         `json:"createdAt"`
-	Driver          *model.Driver                     `json:"driver,omitempty"`
-	Identities      []model.TransportOperatorIdentity `json:"identities,omitempty"`
+	ID              primitive.ObjectID                      `json:"id"`
+	Phone           string                                  `json:"phone"`
+	Email           string                                  `json:"email"`
+	IsEmailVerified bool                                    `json:"isEmailVerified"`
+	IsDriver        bool                                    `json:"isDriver"`
+	RoleIDs         []int                                   `json:"roleIDs"`
+	CreatedAt       time.Time                               `json:"createdAt"`
+	Driver          *model.Driver                           `json:"driver,omitempty"`
+	Identities      []model.TransportOperatorIdentityDetail `json:"identities,omitempty"`
 }
 
-func (r *UserInfoResponse) Format(user *model.User, driver *model.Driver, identities []model.TransportOperatorIdentity) {
+func (r *UserInfoResponse) Format(user *model.User, driver *model.Driver, identities []model.TransportOperatorIdentityDetail) {
 	r.ID = user.ID
 	r.Phone = user.Phone
 	r.Email = user.Email

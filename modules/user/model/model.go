@@ -63,6 +63,16 @@ type (
 		Contact             *string            `json:"contact" bson:"contact"`
 		CreatedAt           time.Time          `json:"createdAt" bson:"createdAt"`
 	}
+
+	TransportOperatorIdentityDetail struct {
+		ID                  primitive.ObjectID `json:"id" bson:"_id"`
+		UserID              primitive.ObjectID `json:"userID" bson:"userID"`
+		TransportOperatorID primitive.ObjectID `json:"transportOperatorID" bson:"transportOperatorID"`
+		Identity            TOIdentity         `json:"identity" bson:"identity"`
+		Contact             *string            `json:"contact" bson:"contact"`
+		CreatedAt           time.Time          `json:"createdAt" bson:"createdAt"`
+		TransportOperator   *TransportOperator `json:"transportOperator" bson:"transportOperator"`
+	}
 )
 
 type (

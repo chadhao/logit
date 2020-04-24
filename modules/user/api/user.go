@@ -209,12 +209,12 @@ func UserQuery(c echo.Context) error {
 		driversMap[driver.ID] = driver
 	}
 
-	identitiesMap := model.GetIdentitiesByUserIDs(uids)
+	identitiesMap, _ := model.GetIdentitiesByUserIDs(uids)
 
 	type resp struct {
 		model.User
-		Driver     model.Driver                      `json:"driver"`
-		Identities []model.TransportOperatorIdentity `json:"identities"`
+		Driver     model.Driver                            `json:"driver"`
+		Identities []model.TransportOperatorIdentityDetail `json:"identities"`
 	}
 	resps := []resp{}
 	for _, user := range users {
