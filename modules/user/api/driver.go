@@ -64,9 +64,13 @@ func GetDriversByTransportOperator(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	uid, _ := c.Get("user").(primitive.ObjectID)
-	if !model.IsIdentity(uid, transportOperatorID, []model.TOIdentity{model.TO_SUPER, model.TO_ADMIN}) {
-		return errors.New("no authorization")
+
+	// 若无admin权限, 则验证user是否有改TO权限
+	if !utils.IsOrigin(c, "admin") {
+		uid, _ := c.Get("user").(primitive.ObjectID)
+		if !model.IsIdentity(uid, transportOperatorID, []model.TOIdentity{model.TO_SUPER, model.TO_ADMIN}) {
+			return errors.New("no authorization")
+		}
 	}
 
 	toFilter := model.TransportOperatorIdentity{
