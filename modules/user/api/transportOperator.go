@@ -21,14 +21,24 @@ func TransportOperatorRegister(c echo.Context) error {
 	}
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
+	user := &model.User{ID: uid}
+	if err := user.Find(); err != nil {
+		return err
+	}
 
 	if _, err := tr.Reg(uid); err != nil {
 		return err
 	}
 
-	// Issue token
-	user := &model.User{ID: uid}
-	user.Find()
+	// Issue token update roles
+	roles := utils.RolesAssert(user.RoleIDs)
+	if !roles.Is(constant.ROLE_TO_SUPER) {
+		user.RoleIDs = append(user.RoleIDs, constant.ROLE_TO_SUPER)
+		if err := user.Update(); err != nil {
+			return err
+		}
+	}
+
 	token, err := user.IssueToken(c.Get("config").(config.Config))
 	if err != nil {
 		return err
