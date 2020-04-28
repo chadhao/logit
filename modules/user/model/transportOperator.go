@@ -91,6 +91,20 @@ func (t *TransportOperator) Update() error {
 	return nil
 }
 
+func (t *TransportOperator) Delete() error {
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	filter := bson.D{{"_id", t.ID}}
+
+	if _, err := db.Collection("transportOperator").DeleteOne(ctx, filter); err != nil {
+		return nil
+	}
+	return nil
+
+}
+
 func (f *TransportOperator) Filter(driverOrigin bool) ([]TransportOperator, error) {
 
 	tos := []TransportOperator{}

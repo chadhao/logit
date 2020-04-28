@@ -37,7 +37,7 @@ func (v *Vehicle) Delete() error {
 	filter := bson.D{{"_id", v.ID}}
 
 	if _, err := db.Collection("vehicle").DeleteOne(ctx, filter); err != nil {
-		return nil
+		return err
 	}
 
 	return nil

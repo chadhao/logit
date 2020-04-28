@@ -92,6 +92,10 @@ func (r *DriverRegRequest) Reg() (*model.Driver, error) {
 
 func (r *TransportOperatorRegRequest) Reg(uid primitive.ObjectID) (*model.TransportOperator, error) {
 	// Should add Request content validation here
+	if r.IsCompany && r.Contact == nil {
+		return nil, errors.New("contact is required")
+	}
+
 	d := model.TransportOperator{
 		ID:            primitive.NewObjectID(),
 		LicenseNumber: r.LicenseNumber,
@@ -106,15 +110,14 @@ func (r *TransportOperatorRegRequest) Reg(uid primitive.ObjectID) (*model.Transp
 	}
 
 	if _, err := d.AddIdentity(uid, model.TO_SUPER, r.Contact); err != nil {
+		d.Delete()
 		return nil, err
 	}
 	// 自雇性质注册时，当已经有driver信息时，自动添加为TO下driver
 	if !d.IsCompany {
 		driver := model.Driver{ID: uid}
 		if err := driver.Find(); err == nil {
-			if _, err := d.AddIdentity(uid, model.TO_DRIVER, nil); err != nil {
-				return nil, err
-			}
+			d.AddIdentity(uid, model.TO_DRIVER, nil)
 		}
 	}
 
