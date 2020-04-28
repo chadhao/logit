@@ -14,6 +14,7 @@ type Txt struct {
 }
 
 func (t *Txt) valid() error {
+	t.Number = strings.TrimLeft(t.Number, "0")
 	if !strings.HasPrefix(t.Number, "+64") {
 		t.Number = "+64" + t.Number
 	}
