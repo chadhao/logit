@@ -21,16 +21,13 @@ func TransportOperatorRegister(c echo.Context) error {
 	}
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
-	user := &model.User{ID: uid}
-	if err := user.Find(); err != nil {
-		return errors.New("cannot find user")
-	}
 
 	if _, err := tr.Reg(uid); err != nil {
 		return err
 	}
 
 	// Issue token
+	user := &model.User{ID: uid}
 	user.Find()
 	token, err := user.IssueToken(c.Get("config").(config.Config))
 	if err != nil {
