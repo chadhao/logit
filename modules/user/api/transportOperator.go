@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/chadhao/logit/config"
 	"github.com/chadhao/logit/modules/user/constant"
 	"github.com/chadhao/logit/modules/user/model"
 	"github.com/chadhao/logit/modules/user/request"
@@ -29,7 +30,14 @@ func TransportOperatorRegister(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, "ok")
+	// Issue token
+	user.Find()
+	token, err := user.IssueToken(c.Get("config").(config.Config))
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, token)
 }
 
 func TransportOperatorApply(c echo.Context) error {
