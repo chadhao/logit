@@ -179,7 +179,7 @@ func (r *VerificationRequest) Send() (err error) {
 
 func (r *VerificationRequest) txtSent() (string, error) {
 	code := utils.GetRandomCode(6)
-	msg := "[Logit] Your verification code is: " + code
+	msg := "[LOGIT] Your verification code is: " + code
 	return code, msgApi.SendTxt(msgApi.TxtRequest{Number: r.Phone, Message: msg})
 }
 
