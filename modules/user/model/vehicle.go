@@ -90,3 +90,17 @@ func (v *Vehicle) FindByDriverID() ([]Vehicle, error) {
 	}
 	return vehicles, nil
 }
+
+// FindVehiclesByIDs 获取对应vehicleIDs的对应vehicle信息
+func FindVehiclesByIDs(vehicleIDs []primitive.ObjectID) ([]Vehicle, error) {
+	vehicles := []Vehicle{}
+
+	cursor, err := db.Collection("vehicle").Find(context.TODO(), bson.M{"_id": bson.M{"$in": vehicleIDs}})
+	if err != nil {
+		return nil, err
+	}
+	if err = cursor.All(context.TODO(), &vehicles); err != nil {
+		return nil, err
+	}
+	return vehicles, nil
+}

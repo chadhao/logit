@@ -9,6 +9,7 @@ import (
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/chadhao/logit/modules/record/model"
+	userInternals "github.com/chadhao/logit/modules/user/internals"
 )
 
 // reqRecords 请求获取记录
@@ -47,21 +48,30 @@ func (reqR *reqRecords) getRecords() ([]*respRecord, error) {
 	if err != nil {
 		return nil, err
 	}
-	// 获取记录下的笔记
+	// 获取记录下的笔记以及具体的vehicle信息
 	recordIDs := []primitive.ObjectID{}
+	vehicleIDs := []primitive.ObjectID{}
 	for _, v := range records {
 		recordIDs = append(recordIDs, v.ID)
+		vehicleIDs = append(vehicleIDs, v.VehicleID)
 	}
 	notesMap, err := model.GetNotesByRecordIDs(recordIDs)
 	if err != nil {
 		return nil, err
 	}
+
+	vehiclesMap, err := userInternals.GetVehicleMapByIDs(vehicleIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	// 拼装返回
 	respRecords := []*respRecord{}
 	for _, v := range records {
 		respRecords = append(respRecords, &respRecord{
-			Record: v,
-			Notes:  notesMap[v.ID],
+			Record:  v,
+			Notes:   notesMap[v.ID],
+			Vehicle: vehiclesMap[v.VehicleID],
 		})
 	}
 
