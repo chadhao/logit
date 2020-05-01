@@ -55,7 +55,7 @@ func PasswordLogin(c echo.Context) error {
 
 	user, err := r.PasswordLogin()
 	if err != nil {
-		return c.JSON(http.StatusNotFound, err.Error())
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	token, err := user.IssueToken(c.Get("config").(config.Config))

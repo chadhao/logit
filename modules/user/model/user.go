@@ -107,7 +107,7 @@ func (u *User) PasswordLogin() error {
 	pass := u.Password
 
 	if err := u.Find(); err != nil {
-		return err
+		return errors.New("user not found")
 	}
 
 	if u.Password != pass {

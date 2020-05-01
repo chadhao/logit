@@ -83,7 +83,7 @@ func (r *LoginRequest) PasswordLogin() (*model.User, error) {
 			LicenseNumber: r.License,
 		}
 		if err := d.Find(); err != nil {
-			return nil, err
+			return nil, errors.New("user not found")
 		}
 		u.ID = d.ID
 		u.Password = r.Password
