@@ -14,15 +14,15 @@ func addDrivingLoc(c echo.Context) error {
 
 	req := new(reqAddDrivingLoc)
 	if err := c.Bind(req); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	drivingLoc, err := req.constructToDrivingLoc(userID)
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	if err = drivingLoc.Save(); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	return c.JSON(http.StatusCreated, drivingLoc)
 }
@@ -32,12 +32,12 @@ func getDrivingLocs(c echo.Context) error {
 
 	req := new(reqDrivingLocs)
 	if err := c.Bind(req); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	drivingLocs, err := req.getDrivingLocs()
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	return c.JSON(http.StatusOK, drivingLocs)
 }

@@ -17,17 +17,17 @@ func TransportOperatorRegister(c echo.Context) error {
 	tr := request.TransportOperatorRegRequest{}
 
 	if err := c.Bind(&tr); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
 	user := &model.User{ID: uid}
 	if err := user.Find(); err != nil {
-		return err
+		return c.JSON(http.StatusNotFound, err.Error())
 	}
 
 	if _, err := tr.Reg(uid); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	// Issue token update roles
@@ -53,17 +53,17 @@ func TransportOperatorApply(c echo.Context) error {
 	}{}
 
 	if err := c.Bind(&r); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	toID, err := primitive.ObjectIDFromHex(r.TransportOperatorID)
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	to := &model.TransportOperator{
 		ID: toID,
 	}
 	if err := to.Find(); err != nil {
-		return err
+		return c.JSON(http.StatusNotFound, err.Error())
 	}
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
@@ -86,7 +86,7 @@ func GetTransportOperators(c echo.Context) error {
 	tos, err := to.Filter(driverOrigin)
 
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	return c.JSON(http.StatusOK, tos)
 }
@@ -95,7 +95,7 @@ func TransportOperatorUpdate(c echo.Context) error {
 	tr := request.TransportOperatorUpdateRequest{}
 
 	if err := c.Bind(&tr); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	uid, _ := c.Get("user").(primitive.ObjectID)
 	ti := model.TransportOperatorIdentity{
@@ -104,7 +104,7 @@ func TransportOperatorUpdate(c echo.Context) error {
 		Identity:            model.TO_SUPER,
 	}
 	if tos, err := ti.Filter(); len(tos) < 1 || err != nil {
-		return errors.New("no authorization")
+		return c.JSON(http.StatusUnauthorized, "no authorization")
 	}
 
 	to, err := tr.Update()
@@ -119,16 +119,16 @@ func TransportOperatorAddIdentity(c echo.Context) error {
 	tr := request.TransportOperatorAddIdentityRequest{}
 
 	if err := c.Bind(&tr); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	uid, _ := c.Get("user").(primitive.ObjectID)
 	if !model.IsIdentity(uid, tr.TransportOperatorID, []model.TOIdentity{model.TO_SUPER}) {
-		return errors.New("no authorization")
+		return c.JSON(http.StatusUnauthorized, "no authorization")
 	}
 
 	assignedUser := &model.User{ID: tr.UserID}
 	if err := assignedUser.Find(); err != nil {
-		return errors.New("cannot find user")
+		return c.JSON(http.StatusNotFound, err.Error())
 	}
 
 	identity, err := tr.Add()
@@ -159,11 +159,11 @@ func TransportOperatorRemoveIdentity(c echo.Context) error {
 		TransportOperatorIdentityID string `json:"id" query:"id"`
 	}{}
 	if err := c.Bind(&r); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	rid, err := primitive.ObjectIDFromHex(r.TransportOperatorIdentityID)
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	uid, _ := c.Get("user").(primitive.ObjectID)
 
@@ -171,11 +171,11 @@ func TransportOperatorRemoveIdentity(c echo.Context) error {
 		ID: rid,
 	}
 	if err := toi.Find(); err != nil {
-		return err
+		return c.JSON(http.StatusNotFound, err.Error())
 	}
 
 	if !model.IsIdentity(uid, toi.TransportOperatorID, []model.TOIdentity{model.TO_SUPER}) {
-		return errors.New("no authorization")
+		return c.JSON(http.StatusUnauthorized, "no authorization")
 	}
 
 	if toi.UserID == uid {
@@ -195,7 +195,7 @@ func TransportOperatorRemoveIdentity(c echo.Context) error {
 	if len(newTois) == 0 {
 		removeUser := &model.User{ID: toi.UserID}
 		if err := removeUser.Find(); err != nil {
-			return errors.New("cannot find user")
+			return c.JSON(http.StatusNotFound, err.Error())
 		}
 		roles := utils.RolesAssert(removeUser.RoleIDs)
 		identity := toi.Identity.GetRole()
@@ -219,17 +219,17 @@ func TransportOperatorVerify(c echo.Context) error {
 	}{}
 
 	if err := c.Bind(&r); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	toID, err := primitive.ObjectIDFromHex(r.TransportOperatorID)
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	to := &model.TransportOperator{
 		ID: toID,
 	}
 	if err := to.Find(); err != nil {
-		return err
+		return c.JSON(http.StatusNotFound, err.Error())
 	}
 
 	to.IsVerified = true
@@ -249,7 +249,7 @@ func TransportOperatorVerify(c echo.Context) error {
 	uid := tois[0].UserID
 	assignedUser := &model.User{ID: uid}
 	if err := assignedUser.Find(); err != nil {
-		return errors.New("cannot find user")
+		return c.JSON(http.StatusNotFound, err.Error())
 	}
 	roles := utils.RolesAssert(assignedUser.RoleIDs)
 	if !roles.Is(constant.ROLE_TO_SUPER) {

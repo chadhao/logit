@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/chadhao/logit/config"
@@ -18,36 +17,36 @@ func DriverRegister(c echo.Context) error {
 	dr := request.DriverRegRequest{}
 
 	if err := c.Bind(&dr); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
 	if utils.IsRole(c, constant.ROLE_DRIVER) {
-		return errors.New("is driver already")
+		return c.JSON(http.StatusBadRequest, "is driver already")
 	}
 
 	user := &model.User{ID: uid}
 	if err := user.Find(); err != nil {
-		return errors.New("cannot find user")
+		return c.JSON(http.StatusNotFound, err.Error())
 	}
 
 	// Assign driver identity
 	dr.ID = uid
 	if _, err := dr.Reg(); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	// Update user role and isDriver
 	user.IsDriver = true
 	user.RoleIDs = append(user.RoleIDs, constant.ROLE_DRIVER)
 	if err := user.Update(); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	// Issue token
 	token, err := user.IssueToken(c.Get("config").(config.Config))
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, token)
@@ -58,18 +57,18 @@ func GetDriversByTransportOperator(c echo.Context) error {
 		TransportOperatorID string `json:"transportOperatorID" query:"transportOperatorID"`
 	}{}
 	if err := c.Bind(&r); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	transportOperatorID, err := primitive.ObjectIDFromHex(r.TransportOperatorID)
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	// 若无admin权限, 则验证user是否有改TO权限
 	if !utils.IsOrigin(c, "admin") {
 		uid, _ := c.Get("user").(primitive.ObjectID)
 		if !model.IsIdentity(uid, transportOperatorID, []model.TOIdentity{model.TO_SUPER, model.TO_ADMIN}) {
-			return errors.New("no authorization")
+			return c.JSON(http.StatusUnauthorized, "user has no authorization")
 		}
 	}
 
@@ -79,7 +78,7 @@ func GetDriversByTransportOperator(c echo.Context) error {
 	}
 	identities, err := toFilter.Filter()
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	driverIDs := []primitive.ObjectID{}
 	for _, v := range identities {
@@ -87,7 +86,7 @@ func GetDriversByTransportOperator(c echo.Context) error {
 	}
 	drivers, err := model.GetDrivers(driverIDs)
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, drivers)

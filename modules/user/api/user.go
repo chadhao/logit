@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/chadhao/logit/config"
@@ -18,7 +17,7 @@ func CheckExistance(c echo.Context) error {
 	r := request.ExistanceRequest{}
 
 	if err := c.Bind(&r); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, r.Check())
@@ -28,16 +27,16 @@ func RefreshToken(c echo.Context) error {
 	r := request.RefreshTokenRequest{}
 
 	if err := c.Bind(&r); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	config := c.Get("config").(config.Config)
 	user, err := r.Validate(config)
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	if err := user.Find(); err != nil {
-		return err
+		return c.JSON(http.StatusNotFound, err.Error())
 	}
 	token, err := user.IssueToken(config)
 	if err != nil {
@@ -51,12 +50,12 @@ func PasswordLogin(c echo.Context) error {
 	r := request.LoginRequest{}
 
 	if err := c.Bind(&r); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	user, err := r.PasswordLogin()
 	if err != nil {
-		return err
+		return c.JSON(http.StatusNotFound, err.Error())
 	}
 
 	token, err := user.IssueToken(c.Get("config").(config.Config))
@@ -76,7 +75,7 @@ func GetUserInfo(c echo.Context) error {
 	)
 
 	if err := user.Find(); err != nil {
-		return err
+		return c.JSON(http.StatusNotFound, err.Error())
 	}
 
 	roles := utils.RolesAssert(user.RoleIDs)
@@ -100,12 +99,12 @@ func UserRegister(c echo.Context) error {
 	ur := request.UserRegRequest{}
 
 	if err := c.Bind(&ur); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	user, err := ur.Reg()
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	// Issue token
@@ -128,12 +127,12 @@ func UserUpdate(c echo.Context) error {
 	ur := request.UserUpdateRequest{}
 
 	if err := c.Bind(&ur); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	uid, _ := c.Get("user").(primitive.ObjectID)
 	user := &model.User{ID: uid}
 	if err := user.Find(); err != nil {
-		return err
+		return c.JSON(http.StatusNotFound, err.Error())
 	}
 
 	if err := ur.Replace(user); err != nil {
@@ -151,12 +150,12 @@ func ForgetPassword(c echo.Context) error {
 	vr := request.ForgetPasswordRequest{}
 
 	if err := c.Bind(&vr); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	user := model.User{Phone: vr.Phone, Email: vr.Email}
 	if err := user.Find(); err != nil {
-		return err
+		return c.JSON(http.StatusNotFound, err.Error())
 	}
 
 	if err := vr.Verify(); err != nil {
@@ -179,14 +178,14 @@ func UserQuery(c echo.Context) error {
 	}{}
 
 	if err := c.Bind(&ur); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	if len(ur.Phone) > 0 && len(ur.Phone) < 4 {
-		return errors.New("phone number need to be more specific")
+		return c.JSON(http.StatusBadRequest, "phone number need to be more specific")
 	}
 	if len(ur.Email) > 0 && len(ur.Email) < 4 {
-		return errors.New("email need to be more specific")
+		return c.JSON(http.StatusBadRequest, "email need to be more specific")
 	}
 
 	userFilter := model.User{

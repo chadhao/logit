@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 	"sort"
 
@@ -18,15 +17,15 @@ func addRecord(c echo.Context) error {
 
 	req := new(reqAddRecord)
 	if err := c.Bind(req); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	r, err := req.constructToRecord(uid)
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	if err = r.Add(); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	return c.JSON(http.StatusOK, r)
 }
@@ -62,7 +61,7 @@ func deleteLatestRecord(c echo.Context) error {
 	req := new(reqRecord)
 	var err error
 	if req.ID, err = primitive.ObjectIDFromHex(c.Param("id")); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	if err := req.deleteRecord(uid); err != nil {
@@ -76,17 +75,17 @@ func getRecords(c echo.Context) error {
 
 	req := new(reqRecords)
 	if err := c.Bind(req); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	uid, _ := c.Get("user").(primitive.ObjectID)
 
 	if req.DriverID != uid.Hex() {
-		return errors.New("no authorization")
+		return c.JSON(http.StatusUnauthorized, "driver has no authorization")
 	}
 
 	records, err := req.getRecords()
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	return c.JSON(http.StatusOK, records)
 }
@@ -96,12 +95,12 @@ func addNote(c echo.Context) error {
 
 	req := new(reqAddNote)
 	if err := c.Bind(req); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
 	if !req.isDriversRecord(uid) {
-		return errors.New("no authorization")
+		return c.JSON(http.StatusUnauthorized, "driver has no authorization")
 	}
 
 	var (
@@ -112,24 +111,24 @@ func addNote(c echo.Context) error {
 	case model.OTHERWORKNOTE:
 		note, err = req.constructToOtherWorkNote()
 		if err != nil {
-			return err
+			return c.JSON(http.StatusBadRequest, err.Error())
 		}
 	case model.MODIFICATIONNOTE:
 		note, err = req.constructToModificationNote(uid)
 		if err != nil {
-			return err
+			return c.JSON(http.StatusBadRequest, err.Error())
 		}
 	case model.TRIPNOTE:
 		note, err = req.constructToTripNote()
 		if err != nil {
-			return err
+			return c.JSON(http.StatusBadRequest, err.Error())
 		}
 	default:
-		return errors.New("no match noteType")
+		return c.JSON(http.StatusBadRequest, "no match noteType")
 	}
 
 	if err = note.Add(); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, note)
@@ -143,11 +142,11 @@ func offlineSyncRecords(c echo.Context) error {
 
 	reqs := []reqAddRecord{}
 	if err := c.Bind(&reqs); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	l := len(reqs)
 	if l == 0 {
-		return errors.New("no records obtained")
+		return c.JSON(http.StatusBadRequest, "no records obtained")
 	}
 
 	sort.Slice(reqs, func(a, b int) bool {
@@ -164,7 +163,7 @@ func offlineSyncRecords(c echo.Context) error {
 	}
 
 	if err := records.SyncAdd(); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	return c.JSON(http.StatusOK, records)
 
@@ -176,7 +175,7 @@ func toGetRecords(c echo.Context) error {
 
 	req := new(reqRecords)
 	if err := c.Bind(req); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	var (
@@ -189,16 +188,16 @@ func toGetRecords(c echo.Context) error {
 	did, err = primitive.ObjectIDFromHex(req.DriverID)
 	tid, err = primitive.ObjectIDFromHex(req.TransportOperatorID)
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	if !userApi.HasAccessTo(uid, did, tid) {
-		return errors.New("no authorization")
+		return c.JSON(http.StatusUnauthorized, "to has no authorization")
 	}
 
 	records, err := req.getRecords()
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	return c.JSON(http.StatusOK, records)
 }

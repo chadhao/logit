@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/chadhao/logit/modules/user/model"
@@ -15,7 +14,7 @@ func CheckVerificationCode(c echo.Context) error {
 		Code  string `json:"code"`
 	}{}
 	if err := c.Bind(&vr); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	red := model.Redis{Key: vr.Phone}
@@ -24,7 +23,7 @@ func CheckVerificationCode(c echo.Context) error {
 		return err
 	}
 	if vr.Code != code {
-		return errors.New("verification code does not match")
+		return c.JSON(http.StatusBadRequest, "verification code does not match")
 	}
 	return c.JSON(http.StatusOK, "ok")
 }
@@ -49,7 +48,7 @@ func GetVerification(c echo.Context) error {
 	vr := request.VerificationRequest{}
 
 	if err := c.Bind(&vr); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	if err := vr.Send(); err != nil {
