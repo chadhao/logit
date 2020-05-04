@@ -181,11 +181,17 @@ func (r *UserUpdateRequest) Replace(user *model.User) (err error) {
 		if len(*r.Password) < 6 || len(*r.Password) > 32 {
 			return errors.New("the length of password should be between 6 to 32")
 		}
+		if user.Password == *r.Password {
+			return errors.New("password is the same as the old one")
+		}
 		user.Password = *r.Password
 	}
 	if r.Pin != nil {
 		if len(*r.Pin) != 4 {
 			return errors.New("the pin should be 4 digits")
+		}
+		if user.Pin == *r.Pin {
+			return errors.New("pin is the same as the old one")
 		}
 		user.Pin = *r.Pin
 	}

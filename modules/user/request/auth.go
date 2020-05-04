@@ -190,7 +190,7 @@ func (r *VerificationRequest) emailSent() (string, error) {
 		Recipients: []string{r.Email},
 		Subject:    "Logit Verification Email",
 		HTMLBody: "<h1>Logit Verification Email</h1><p>Please click " +
-			"<a href='http://dev.logit.co.nz/email/verification?email=" + r.Email + "&token=" + code + "'>here</a>" +
+			"<a href='https://dev.ssh.logit.co.nz/email/verification?email=" + r.Email + "&token=" + code + "'>here</a>" +
 			" to active email.</p>",
 		CharSet: "UTF-8",
 	}
