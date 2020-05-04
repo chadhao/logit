@@ -43,6 +43,12 @@ func loadRoutes(r router.Router) {
 		Roles:   []int{constant.ROLE_USER_DEFAULT},
 	})
 	r.Add(&router.Route{
+		Path:    "/user/pin",
+		Method:  http.MethodPost,
+		Handler: api.DriverPinCheck,
+		Roles:   []int{constant.ROLE_DRIVER},
+	})
+	r.Add(&router.Route{
 		Path:    "/user/code",
 		Method:  http.MethodPost,
 		Handler: api.GetVerification,

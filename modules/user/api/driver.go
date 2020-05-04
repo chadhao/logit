@@ -12,7 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// DriverRegister 司机注册
+// DriverRegister 司机注册, 司机注册时需要添加pin码
 func DriverRegister(c echo.Context) error {
 	dr := request.DriverRegRequest{}
 
@@ -39,6 +39,7 @@ func DriverRegister(c echo.Context) error {
 	// Update user role and isDriver
 	user.IsDriver = true
 	user.RoleIDs = append(user.RoleIDs, constant.ROLE_DRIVER)
+	user.Pin = dr.Pin
 	if err := user.Update(); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
@@ -50,6 +51,28 @@ func DriverRegister(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, token)
+}
+
+// DriverPinCheck 司机验证pin码
+func DriverPinCheck(c echo.Context) error {
+	r := struct {
+		Pin string `json:"pin"`
+	}{}
+	if err := c.Bind(&r); err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	uid, _ := c.Get("user").(primitive.ObjectID)
+	user := &model.User{ID: uid}
+	if err := user.Find(); err != nil {
+		return c.JSON(http.StatusNotFound, err.Error())
+	}
+
+	if user.Pin != r.Pin {
+		return c.JSON(http.StatusUnauthorized, "pin not match")
+	}
+
+	return c.JSON(http.StatusOK, "ok")
 }
 
 func GetDriversByTransportOperator(c echo.Context) error {

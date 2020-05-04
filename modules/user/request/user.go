@@ -17,14 +17,16 @@ type (
 		Password string `json:"password" valid:"stringlength(6|32)"`
 	}
 	UserUpdateRequest struct {
-		Password string `json:"password" valid:"stringlength(6|32)"`
+		Password *string `json:"password,omitempty"`
+		Pin      *string `json:"pin,omitempty"`
 	}
 	DriverRegRequest struct {
 		ID            primitive.ObjectID `json:"id"`
-		LicenseNumber string             `json:"licenseNumber"`
-		DateOfBirth   time.Time          `json:"dateOfBirth"`
-		Firstnames    string             `json:"firstnames"`
-		Surname       string             `json:"surname"`
+		LicenseNumber string             `json:"licenseNumber" valid:"stringlength(5|8)`
+		DateOfBirth   time.Time          `json:"dateOfBirth" valid:"required"`
+		Firstnames    string             `json:"firstnames" valid:"required"`
+		Surname       string             `json:"surname" valid:"required"`
+		Pin           string             `json:"pin" valid:"stringlength(4|4)`
 	}
 	TransportOperatorRegRequest struct {
 		ID            primitive.ObjectID `json:"id"`
@@ -73,7 +75,9 @@ func (r *UserRegRequest) Reg() (*model.User, error) {
 }
 
 func (r *DriverRegRequest) Reg() (*model.Driver, error) {
-	// Should add Request content validation here
+	if _, err := valid.ValidateStruct(r); err != nil {
+		return nil, err
+	}
 	d := model.Driver{
 		ID:            r.ID,
 		LicenseNumber: r.LicenseNumber,
@@ -170,9 +174,20 @@ func (r *TransportOperatorAddIdentityRequest) Add() (*model.TransportOperatorIde
 }
 
 func (r *UserUpdateRequest) Replace(user *model.User) (err error) {
-	if _, err := valid.ValidateStruct(r); err != nil {
-		return err
+	if (UserUpdateRequest{}) == *r {
+		return errors.New("at least one update request is required")
 	}
-	user.Password = r.Password
+	if r.Password != nil {
+		if len(*r.Password) < 6 || len(*r.Password) > 32 {
+			return errors.New("the length of password should be between 6 to 32")
+		}
+		user.Password = *r.Password
+	}
+	if r.Pin != nil {
+		if len(*r.Pin) != 4 {
+			return errors.New("the pin should be 4 digits")
+		}
+		user.Pin = *r.Pin
+	}
 	return nil
 }
