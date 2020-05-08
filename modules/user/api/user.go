@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/chadhao/logit/config"
+	logInternals "github.com/chadhao/logit/modules/log/internals"
 	"github.com/chadhao/logit/modules/user/constant"
 	"github.com/chadhao/logit/modules/user/model"
 	"github.com/chadhao/logit/modules/user/request"
@@ -142,6 +143,17 @@ func UserUpdate(c echo.Context) error {
 	if err := user.Update(); err != nil {
 		return err
 	}
+
+	// log 记录
+	go func(from *primitive.ObjectID, content interface{}) {
+		log := &logInternals.ReqAddLog{
+			Type:    "modification",
+			FromFun: "UserUpdate",
+			From:    from,
+			Content: content,
+		}
+		logInternals.AddLog(log)
+	}(&uid, ur)
 
 	return c.JSON(http.StatusOK, "ok")
 }
