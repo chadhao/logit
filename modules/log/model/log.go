@@ -27,9 +27,10 @@ const (
 type Log struct {
 	ID        primitive.ObjectID  `bson:"_id" json:"id" valid:"-"`
 	Type      Type                `json:"type" bson:"type" valid:"required"`
+	Message   *string             `json:"message,omitempty" bson:"message,omitempty"`
 	FromFun   string              `json:"fromFun" bson:"fromFun" valid:"required"`
 	From      *primitive.ObjectID `json:"from,omitempty" bson:"from,omitempty"`
-	Content   interface{}         `json:"content" bson:"content" valid:"required"`
+	Content   interface{}         `json:"content" bson:"content"`
 	CreatedAt time.Time           `bson:"createdAt" json:"createdAt" valid:"required"`
 }
 

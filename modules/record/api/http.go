@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"sort"
 
+	logInternals "github.com/chadhao/logit/modules/log/internals"
+
 	"github.com/chadhao/logit/modules/record/model"
 	userApi "github.com/chadhao/logit/modules/user/internals"
 	"github.com/labstack/echo/v4"
@@ -141,12 +143,24 @@ func offlineSyncRecords(c echo.Context) error {
 	uid, _ := c.Get("user").(primitive.ObjectID)
 
 	reqs := []reqAddRecord{}
+	log := &logInternals.ReqAddLog{
+		Type:    "error",
+		FromFun: "offlineSyncRecords",
+		From:    &uid,
+	}
+
 	if err := c.Bind(&reqs); err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		e := err.Error()
+		log.Message = &e
+		go logInternals.AddLog(log)
+		return c.JSON(http.StatusBadRequest, e)
 	}
 	l := len(reqs)
 	if l == 0 {
-		return c.JSON(http.StatusBadRequest, "no records obtained")
+		e := "no records obtained"
+		log.Message = &e
+		go logInternals.AddLog(log)
+		return c.JSON(http.StatusBadRequest, e)
 	}
 
 	sort.Slice(reqs, func(a, b int) bool {
@@ -157,13 +171,19 @@ func offlineSyncRecords(c echo.Context) error {
 	for i := 0; i < l; i++ {
 		r, err := reqs[i].constructToSyncRecord(uid)
 		if err != nil {
+			e := err.Error()
+			log.Message = &e
+			go logInternals.AddLog(log)
 			return err
 		}
 		records = append(records, *r)
 	}
 
 	if err := records.SyncAdd(); err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		e := err.Error()
+		log.Message = &e
+		go logInternals.AddLog(log)
+		return c.JSON(http.StatusBadRequest, e)
 	}
 	return c.JSON(http.StatusOK, records)
 
