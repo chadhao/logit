@@ -142,8 +142,12 @@ func (reqAddR *reqAddRecord) valid() error {
 	if reqAddR.Time.IsZero() {
 		return errors.New("time is required")
 	}
-	if math.Abs(reqAddR.Time.Sub(time.Now()).Seconds()) > 10 {
-		return errors.New("time and system time conflict")
+	// 如果传入了clientTime,则表示用户当前时间time为用户自己手动输入的时间，则传入不检查(和上条时间对比在下一块儿检查);
+	// 如果未传入clientTime,则表示用户当前时间time为用户自己手机的时间，验证是否和标准时间相符，不相符则返回错误。
+	if reqAddR.ClientTime == nil {
+		if math.Abs(reqAddR.Time.Sub(time.Now()).Seconds()) > 10 {
+			return errors.New("time and system time conflict")
+		}
 	}
 
 	// 2. 若公里数不为空时的检验

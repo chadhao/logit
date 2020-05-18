@@ -92,6 +92,8 @@ func (l *Location) fillFull() (err error) {
 }
 
 // Record 记录
+// time为生成record的标准时间
+// 假如传入time是用户自定义的时间，则需要同时传入clientTime,为用户当前手机时间
 type Record struct {
 	ID            primitive.ObjectID `bson:"_id" json:"id" valid:"-"`
 	DriverID      primitive.ObjectID `bson:"driverID" json:"driverID" valid:"required"`
