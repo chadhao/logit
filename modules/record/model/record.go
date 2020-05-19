@@ -108,6 +108,7 @@ type Record struct {
 	CreatedAt     time.Time          `bson:"createdAt" json:"createdAt" valid:"required"`
 	ClientTime    *time.Time         `bson:"clientTime,omitempty" json:"clientTime,omitempty" valid:"-"`
 	DeletedAt     *time.Time         `bson:"deletedAt,omitempty" json:"deletedAt,omitempty" valid:"-"`
+	Active        *bool              `bson:"active,omitempty" json:"active,omitempty" valid:"-"`
 }
 
 // Add 记录添加
@@ -122,7 +123,12 @@ func (r *Record) Add() (err error) {
 		return
 	}
 
-	// 数据库添加记录
+	// 数据库更新添加记录，去除上一条record的active,当前record增加active
+	if _, err = recordCollection.UpdateOne(context.TODO(), bson.M{"_id": lastRec.ID}, bson.M{"$unset": bson.M{"active": ""}}); err != nil {
+		return
+	}
+	active := true
+	r.Active = &active
 	if _, err = recordCollection.InsertOne(context.TODO(), r); err != nil {
 		return
 	}
@@ -131,14 +137,30 @@ func (r *Record) Add() (err error) {
 
 // Delete 记录删除
 func (r *Record) Delete() error {
-	switch {
-	case r.DeletedAt != nil:
+	if r.DeletedAt != nil {
 		return errors.New("record has already been deleted")
-	case !r.isLatestRecord():
-		return errors.New("record is not the lastest one")
 	}
+
+	lastest, err := GetLastestRecord(r.DriverID)
+	if err != mongo.ErrNoDocuments {
+		if err != nil {
+			return err
+		}
+		if lastest.ID != r.ID {
+			return errors.New("record is not the lastest one")
+		}
+	}
+
 	// 数据库记录添加删除标记
-	update := bson.M{"$set": bson.M{"deletedAt": time.Now()}}
+	if err != mongo.ErrNoDocuments {
+		// 为上一条record添加active
+		active := true
+		update := bson.M{"$set": bson.M{"active": &active}}
+		if _, err := recordCollection.UpdateOne(context.TODO(), bson.M{"_id": lastest.ID}, update); err != nil {
+			return err
+		}
+	}
+	update := bson.M{"$set": bson.M{"deletedAt": time.Now()}, "$unset": bson.M{"active": ""}}
 	if _, err := recordCollection.UpdateOne(context.TODO(), bson.M{"_id": r.ID}, update); err != nil {
 		return err
 	}
@@ -191,8 +213,12 @@ func (r *Record) isLatestRecord() bool {
 // GetLastestRecord 获取最近的一条记录
 func GetLastestRecord(driverID primitive.ObjectID) (*Record, error) {
 	lastRec := new(Record)
-	opts := options.FindOne().SetSort(bson.D{{Key: "time", Value: -1}})
-	err := recordCollection.FindOne(context.TODO(), bson.M{"driverID": driverID, "deletedAt": nil}, opts).Decode(lastRec)
+
+	err := recordCollection.FindOne(context.TODO(), bson.M{"driverID": driverID, "active": true}).Decode(lastRec)
+	if err == mongo.ErrNoDocuments {
+		opts := options.FindOne().SetSort(bson.D{{Key: "time", Value: -1}})
+		err = recordCollection.FindOne(context.TODO(), bson.M{"driverID": driverID, "deletedAt": nil}, opts).Decode(lastRec)
+	}
 	return lastRec, err
 }
 
@@ -233,12 +259,23 @@ func (rs Records) SyncAdd() (err error) {
 	if err != nil && err != mongo.ErrNoDocuments {
 		return err
 	}
+	lastRecID := lastRec.ID
+
 	l := len(rs)
 	for i := 0; i < l; i++ {
 		if err = rs[i].beforeAdd(lastRec); err != nil {
 			return
 		}
 		lastRec = &rs[i]
+	}
+	// 为最后一条record添加active,去除上次record的active
+	active := true
+	rs[l-1].Active = &active
+
+	if err != mongo.ErrNoDocuments {
+		if _, err = recordCollection.UpdateOne(context.TODO(), bson.M{"_id": lastRecID}, bson.M{"$unset": bson.M{"active": ""}}); err != nil {
+			return
+		}
 	}
 
 	// 数据库添加记录
