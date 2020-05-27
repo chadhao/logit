@@ -38,7 +38,9 @@ func (sn *SystemNote) Add() error {
 	if _, err := valid.ValidateStruct(sn); err != nil {
 		return err
 	}
-
+	if err := sn.Note.valid(); err != nil {
+		return err
+	}
 	// 数据库添加记录
 	if _, err := noteCollection.InsertOne(context.TODO(), sn); err != nil {
 		return err
@@ -56,7 +58,9 @@ func (own *OtherWorkNote) Add() error {
 	if _, err := valid.ValidateStruct(own); err != nil {
 		return err
 	}
-
+	if err := own.Note.valid(); err != nil {
+		return err
+	}
 	// 数据库添加记录
 	if _, err := noteCollection.InsertOne(context.TODO(), own); err != nil {
 		return err
@@ -75,7 +79,9 @@ func (mn *ModificationNote) Add() error {
 	if _, err := valid.ValidateStruct(mn); err != nil {
 		return err
 	}
-
+	if err := mn.Note.valid(); err != nil {
+		return err
+	}
 	// 数据库添加记录
 	if _, err := noteCollection.InsertOne(context.TODO(), mn); err != nil {
 		return err
@@ -96,6 +102,9 @@ type TripNote struct {
 // Add 行程笔记添加到数据库
 func (tn *TripNote) Add() error {
 	if _, err := valid.ValidateStruct(tn); err != nil {
+		return err
+	}
+	if err := tn.Note.valid(); err != nil {
 		return err
 	}
 
