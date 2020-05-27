@@ -101,9 +101,9 @@ func addNote(c echo.Context) error {
 	}
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
-	if !req.isDriversRecord(uid) {
-		return c.JSON(http.StatusUnauthorized, "driver has no authorization")
-	}
+	// if !req.isDriversRecord(uid) {
+	// 	return c.JSON(http.StatusUnauthorized, "driver has no authorization")
+	// }
 
 	var (
 		note model.INote

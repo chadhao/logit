@@ -2,7 +2,6 @@ package model
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	valid "github.com/asaskevich/govalidator"
@@ -18,24 +17,26 @@ type INote interface {
 // Note 笔记
 type Note struct {
 	ID        primitive.ObjectID `bson:"_id" json:"id" valid:"-"`
-	RecordID  primitive.ObjectID `bson:"recordID" json:"recordID" valid:"-"`
+	RecordID  primitive.ObjectID `bson:"recordID" json:"recordID" valid:"required"`
 	Type      NoteType           `bson:"noteType" json:"noteType" valid:"required"`
 	Comment   string             `bson:"comment" json:"comment" valid:"-"`
 	CreatedAt time.Time          `bson:"createdAt" json:"createdAt" valid:"required"`
 }
 
+func (n *Note) valid() error {
+	_, err := valid.ValidateStruct(n)
+	return err
+}
+
 // SystemNote 系统笔记
 type SystemNote struct {
-	Note `bson:",inline"`
+	Note `bson:",inline" valid:"-"`
 }
 
 // Add 系统笔记添加到数据库
 func (sn *SystemNote) Add() error {
 	if _, err := valid.ValidateStruct(sn); err != nil {
 		return err
-	}
-	if sn.RecordID.IsZero() {
-		return errors.New("recordID is required")
 	}
 
 	// 数据库添加记录
@@ -47,16 +48,13 @@ func (sn *SystemNote) Add() error {
 
 // OtherWorkNote 其它笔记
 type OtherWorkNote struct {
-	Note `bson:",inline"`
+	Note `bson:",inline" valid:"-"`
 }
 
 // Add 其它笔记添加到数据库
 func (own *OtherWorkNote) Add() error {
 	if _, err := valid.ValidateStruct(own); err != nil {
 		return err
-	}
-	if own.RecordID.IsZero() {
-		return errors.New("recordID is required")
 	}
 
 	// 数据库添加记录
@@ -68,20 +66,14 @@ func (own *OtherWorkNote) Add() error {
 
 // ModificationNote 人为修改笔记
 type ModificationNote struct {
-	Note `bson:",inline"`
-	By   primitive.ObjectID `bson:"by" json:"by" valid:"-"`
+	Note `bson:",inline" valid:"-"`
+	By   primitive.ObjectID `bson:"by" json:"by" valid:"required"`
 }
 
 // Add 人为修改笔记添加到数据库
 func (mn *ModificationNote) Add() error {
 	if _, err := valid.ValidateStruct(mn); err != nil {
 		return err
-	}
-	if mn.RecordID.IsZero() {
-		return errors.New("recordID is required")
-	}
-	if mn.By.IsZero() {
-		return errors.New("by is required")
 	}
 
 	// 数据库添加记录
@@ -93,8 +85,8 @@ func (mn *ModificationNote) Add() error {
 
 // TripNote 行程笔记
 type TripNote struct {
-	Note                `bson:",inline"`
-	TransportOperatorID primitive.ObjectID `bson:"transportOperatorID" json:"transportOperatorID" valid:"-"`
+	Note                `bson:",inline" valid:"-"`
+	TransportOperatorID primitive.ObjectID `bson:"transportOperatorID" json:"transportOperatorID" valid:"required"`
 	StartTime           time.Time          `bson:"startTime" json:"startTime" valid:"required"`
 	EndTime             time.Time          `bson:"endTime" json:"endTime" valid:"required"`
 	StartLocation       Location           `bson:"startLocation" json:"startLocation" valid:"required"`
@@ -105,12 +97,6 @@ type TripNote struct {
 func (tn *TripNote) Add() error {
 	if _, err := valid.ValidateStruct(tn); err != nil {
 		return err
-	}
-	if tn.RecordID.IsZero() {
-		return errors.New("recordID is required")
-	}
-	if tn.TransportOperatorID.IsZero() {
-		return errors.New("transportOperatorID is required")
 	}
 
 	// 数据库添加记录

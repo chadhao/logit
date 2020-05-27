@@ -1,7 +1,6 @@
 package request
 
 import (
-	"errors"
 	"time"
 
 	valid "github.com/asaskevich/govalidator"
@@ -12,16 +11,13 @@ import (
 
 type (
 	VehicleCreateRequest struct {
-		DriverID     primitive.ObjectID `json:"driverID" valid:"-"`
+		DriverID     primitive.ObjectID `json:"driverID" valid:"required"`
 		Registration string             `json:"registration" valid:"stringlength(5|8)"`
 		IsDiesel     bool               `json:"isDiesel" valid:"-"`
 	}
 )
 
 func (r *VehicleCreateRequest) Create() (*model.Vehicle, error) {
-	if r.DriverID.IsZero() {
-		return nil, errors.New("driverID is required")
-	}
 	if _, err := valid.ValidateStruct(r); err != nil {
 		return nil, err
 	}
