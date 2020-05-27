@@ -124,7 +124,7 @@ type reqAddRecord struct {
 	Duration      string             `json:"duration" valid:"required"`
 	StartLocation model.Location     `json:"startLocation" valid:"required"`
 	EndLocation   model.Location     `json:"endLocation" valid:"required"`
-	VehicleID     primitive.ObjectID `json:"vehicleID" valid:"required"`
+	VehicleID     primitive.ObjectID `json:"vehicleID" valid:"-"`
 	StartMileAge  *float64           `json:"startDistance,omitempty" valid:"-"`
 	EndMileAge    *float64           `json:"endDistance,omitempty" valid:"-"`
 	ClientTime    *time.Time         `json:"clientTime,omitempty" valid:"-"`
@@ -134,6 +134,9 @@ type reqAddRecord struct {
 func (reqAddR *reqAddRecord) valid() error {
 	if reqAddR.Type != model.WORK && reqAddR.Type != model.REST {
 		return errors.New("no match type")
+	}
+	if reqAddR.VehicleID.IsZero() {
+		return errors.New("vehicleID is required")
 	}
 	if _, err := valid.ValidateStruct(reqAddR); err != nil {
 		return err
@@ -236,27 +239,18 @@ func (reqAddR *reqAddRecord) constructToSyncRecord(driverID primitive.ObjectID) 
 }
 
 type reqAddNote struct {
-	NoteType            model.NoteType     `json:"noteType" valid:"required"`
-	RecordID            primitive.ObjectID `json:"recordID" valid:"required"`
-	Comment             string             `json:"comment" valid:"optional"`
-	TransportOperatorID primitive.ObjectID `bson:"transportOperatorID" json:"transportOperatorID" valid:"-"`
-	StartTime           time.Time          `bson:"startTime" json:"startTime" valid:"-"`
-	EndTime             time.Time          `bson:"endTime" json:"endTime" valid:"-"`
-	StartLocation       model.Location     `bson:"startLocation" json:"startLocation" valid:"-"`
-	EndLocation         model.Location     `bson:"endLocation" json:"endLocation" valid:"-"`
-}
-
-// valid 添加笔记验证
-func (r *reqAddNote) valid() error {
-	_, err := valid.ValidateStruct(r)
-	return err
+	NoteType            model.NoteType     `json:"noteType"`
+	RecordID            primitive.ObjectID `json:"recordID"`
+	Comment             string             `json:"comment"`
+	TransportOperatorID primitive.ObjectID `json:"transportOperatorID"`
+	StartTime           time.Time          `json:"startTime"`
+	EndTime             time.Time          `json:"endTime"`
+	StartLocation       model.Location     `json:"startLocation"`
+	EndLocation         model.Location     `json:"endLocation"`
 }
 
 // constructToSystemNote reqAddNote
 func (r *reqAddNote) constructToSystemNote() (*model.SystemNote, error) {
-	if err := r.valid(); err != nil {
-		return nil, err
-	}
 	sn := &model.SystemNote{
 		Note: model.Note{
 			ID:        primitive.NewObjectID(),
@@ -271,9 +265,6 @@ func (r *reqAddNote) constructToSystemNote() (*model.SystemNote, error) {
 
 // constructToOtherWorkNote 将reqAddNote构造为OtherWorkNote
 func (r *reqAddNote) constructToOtherWorkNote() (*model.OtherWorkNote, error) {
-	if err := r.valid(); err != nil {
-		return nil, err
-	}
 	own := &model.OtherWorkNote{
 		Note: model.Note{
 			ID:        primitive.NewObjectID(),
@@ -288,9 +279,6 @@ func (r *reqAddNote) constructToOtherWorkNote() (*model.OtherWorkNote, error) {
 
 // constructToModificationNote 将reqAddNote构造为ModificationNote
 func (r *reqAddNote) constructToModificationNote(by primitive.ObjectID) (*model.ModificationNote, error) {
-	if err := r.valid(); err != nil {
-		return nil, err
-	}
 	mn := &model.ModificationNote{
 		Note: model.Note{
 			ID:        primitive.NewObjectID(),
@@ -306,9 +294,6 @@ func (r *reqAddNote) constructToModificationNote(by primitive.ObjectID) (*model.
 
 // constructToTripNote 将reqAddNote构造为TripNote
 func (r *reqAddNote) constructToTripNote() (*model.TripNote, error) {
-	if err := r.valid(); err != nil {
-		return nil, err
-	}
 	tn := &model.TripNote{
 		Note: model.Note{
 			ID:        primitive.NewObjectID(),

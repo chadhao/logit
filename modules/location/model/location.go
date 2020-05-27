@@ -21,7 +21,7 @@ type (
 	// DrivingLoc 司机在行驶过程中的位置信息
 	DrivingLoc struct {
 		ID        primitive.ObjectID `bson:"_id" json:"id" valid:"-"`
-		DriverID  primitive.ObjectID `bson:"driverID" json:"driverID" valid:"required"`
+		DriverID  primitive.ObjectID `bson:"driverID" json:"driverID" valid:"-"`
 		CreatedAt time.Time          `bson:"createdAt" json:"createdAt" valid:"required"`
 		Coors     Coors              `bson:"coors" json:"coors" valid:"required"`
 	}
@@ -37,6 +37,9 @@ func (dLoc *DrivingLoc) Save() error {
 	}
 	if dLoc.CreatedAt.IsZero() {
 		dLoc.CreatedAt = time.Now()
+	}
+	if dLoc.DriverID.IsZero() {
+		return errors.New("driverID is required")
 	}
 	if _, err := valid.ValidateStruct(dLoc); err != nil {
 		return err

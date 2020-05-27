@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log"
 	"net/http"
 	"sort"
 
@@ -94,7 +95,6 @@ func getRecords(c echo.Context) error {
 
 // addNote 为记录添加笔记
 func addNote(c echo.Context) error {
-
 	req := new(reqAddNote)
 	if err := c.Bind(req); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
@@ -109,6 +109,7 @@ func addNote(c echo.Context) error {
 		note model.INote
 		err  error
 	)
+
 	switch req.NoteType {
 	case model.OTHERWORKNOTE:
 		note, err = req.constructToOtherWorkNote()
@@ -123,8 +124,10 @@ func addNote(c echo.Context) error {
 	case model.TRIPNOTE:
 		note, err = req.constructToTripNote()
 		if err != nil {
+			log.Println(err)
 			return c.JSON(http.StatusBadRequest, err.Error())
 		}
+
 	default:
 		return c.JSON(http.StatusBadRequest, "no match noteType")
 	}

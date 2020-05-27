@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	valid "github.com/asaskevich/govalidator"
@@ -17,7 +18,7 @@ type INote interface {
 // Note 笔记
 type Note struct {
 	ID        primitive.ObjectID `bson:"_id" json:"id" valid:"-"`
-	RecordID  primitive.ObjectID `bson:"recordID" json:"recordID" valid:"required"`
+	RecordID  primitive.ObjectID `bson:"recordID" json:"recordID" valid:"-"`
 	Type      NoteType           `bson:"noteType" json:"noteType" valid:"required"`
 	Comment   string             `bson:"comment" json:"comment" valid:"-"`
 	CreatedAt time.Time          `bson:"createdAt" json:"createdAt" valid:"required"`
@@ -33,6 +34,10 @@ func (sn *SystemNote) Add() error {
 	if _, err := valid.ValidateStruct(sn); err != nil {
 		return err
 	}
+	if sn.RecordID.IsZero() {
+		return errors.New("recordID is required")
+	}
+
 	// 数据库添加记录
 	if _, err := noteCollection.InsertOne(context.TODO(), sn); err != nil {
 		return err
@@ -50,6 +55,10 @@ func (own *OtherWorkNote) Add() error {
 	if _, err := valid.ValidateStruct(own); err != nil {
 		return err
 	}
+	if own.RecordID.IsZero() {
+		return errors.New("recordID is required")
+	}
+
 	// 数据库添加记录
 	if _, err := noteCollection.InsertOne(context.TODO(), own); err != nil {
 		return err
@@ -60,7 +69,7 @@ func (own *OtherWorkNote) Add() error {
 // ModificationNote 人为修改笔记
 type ModificationNote struct {
 	Note `bson:",inline"`
-	By   primitive.ObjectID `bson:"by" json:"by" valid:"required"`
+	By   primitive.ObjectID `bson:"by" json:"by" valid:"-"`
 }
 
 // Add 人为修改笔记添加到数据库
@@ -68,6 +77,13 @@ func (mn *ModificationNote) Add() error {
 	if _, err := valid.ValidateStruct(mn); err != nil {
 		return err
 	}
+	if mn.RecordID.IsZero() {
+		return errors.New("recordID is required")
+	}
+	if mn.By.IsZero() {
+		return errors.New("by is required")
+	}
+
 	// 数据库添加记录
 	if _, err := noteCollection.InsertOne(context.TODO(), mn); err != nil {
 		return err
@@ -78,7 +94,7 @@ func (mn *ModificationNote) Add() error {
 // TripNote 行程笔记
 type TripNote struct {
 	Note                `bson:",inline"`
-	TransportOperatorID primitive.ObjectID `bson:"transportOperatorID" json:"transportOperatorID" valid:"required"`
+	TransportOperatorID primitive.ObjectID `bson:"transportOperatorID" json:"transportOperatorID" valid:"-"`
 	StartTime           time.Time          `bson:"startTime" json:"startTime" valid:"required"`
 	EndTime             time.Time          `bson:"endTime" json:"endTime" valid:"required"`
 	StartLocation       Location           `bson:"startLocation" json:"startLocation" valid:"required"`
@@ -90,6 +106,13 @@ func (tn *TripNote) Add() error {
 	if _, err := valid.ValidateStruct(tn); err != nil {
 		return err
 	}
+	if tn.RecordID.IsZero() {
+		return errors.New("recordID is required")
+	}
+	if tn.TransportOperatorID.IsZero() {
+		return errors.New("transportOperatorID is required")
+	}
+
 	// 数据库添加记录
 	if _, err := noteCollection.InsertOne(context.TODO(), tn); err != nil {
 		return err
