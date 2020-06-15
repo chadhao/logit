@@ -72,7 +72,7 @@ func loadRoutes(r router.Router) {
 		Path:    "/user/users",
 		Method:  http.MethodPost,
 		Handler: api.UserQuery,
-		Roles:   []int{constant.ROLE_SUPER, constant.ROLE_ADMIN},
+		Roles:   []int{constant.ROLE_SUPER, constant.ROLE_ADMIN, constant.ROLE_TO_SUPER, constant.ROLE_TO_ADMIN},
 	})
 
 	// Driver
