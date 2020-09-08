@@ -18,7 +18,7 @@ func LoadRoutes(r router.Router) {
 	r.Add(&router.Route{
 		Path:    "/location",
 		Method:  http.MethodGet,
-		Handler: getDrivingLocs,
+		Handler: findDrivingLocs,
 		Roles:   []int{constant.ROLE_SUPER, constant.ROLE_ADMIN},
 	})
 }

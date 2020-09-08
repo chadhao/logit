@@ -11,11 +11,11 @@ import (
 type (
 	// CreateLogInput 创建日志参数
 	CreateLogInput struct {
-		Type    model.Type          `json:"type" bson:"type" valid:"required"`
-		Message *string             `json:"message,omitempty" bson:"message,omitempty"`
-		FromFun string              `json:"fromFun" bson:"fromFun" valid:"required"`
-		From    *primitive.ObjectID `json:"from,omitempty" bson:"from,omitempty"`
-		Content interface{}         `json:"content" bson:"content"`
+		Type    model.Type          `json:"type" valid:"required"`
+		Message *string             `json:"message,omitempty"`
+		FromFun string              `json:"fromFun" valid:"required"`
+		From    *primitive.ObjectID `json:"from,omitempty"`
+		Content interface{}         `json:"content"`
 	}
 	// CreateLogOutput 创建日志返回参数
 	CreateLogOutput struct {
