@@ -29,3 +29,8 @@ func (coors Coors) GetAddrFromCoors() (addr Address, err error) {
 	addr = Address(resp[0].FormattedAddress)
 	return
 }
+
+// EmptyCoors 判断坐标是否为空
+func (coors Coors) EmptyCoors() bool {
+	return coors.Lat == 0 && coors.Lng == 0
+}

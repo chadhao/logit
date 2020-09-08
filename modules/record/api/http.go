@@ -1,210 +1,215 @@
 package api
 
 import (
-	"log"
 	"net/http"
 	"sort"
-
-	logInternals "github.com/chadhao/logit/modules/log/internals"
+	"time"
 
 	"github.com/chadhao/logit/modules/record/model"
+	"github.com/chadhao/logit/modules/record/service"
 	userApi "github.com/chadhao/logit/modules/user/internals"
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
+
+/************************************************************************************************/
+/********************************** Driver 权限下的record操作 *************************************/
+/************************************************************************************************/
+
+type addRecordRequest struct {
+	Type          model.Type         `json:"type" valid:"required"`
+	Time          time.Time          `json:"time" valid:"required"`
+	Duration      string             `json:"duration" valid:"required"`
+	StartLocation model.Location     `json:"startLocation" valid:"required"`
+	EndLocation   model.Location     `json:"endLocation" valid:"required"`
+	VehicleID     primitive.ObjectID `json:"vehicleID" valid:"-"`
+	StartMileAge  *float64           `json:"startDistance,omitempty" valid:"-"`
+	EndMileAge    *float64           `json:"endDistance,omitempty" valid:"-"`
+	ClientTime    *time.Time         `json:"clientTime,omitempty" valid:"-"`
+}
+
+func (r *addRecordRequest) toCreateRecordInput(driverID primitive.ObjectID) (*service.CreateRecordInput, error) {
+	duration, err := time.ParseDuration(r.Duration)
+	if err != nil {
+		return nil, err
+	}
+	out := &service.CreateRecordInput{
+		DriverID:      driverID,
+		Type:          r.Type,
+		Time:          r.Time,
+		Duration:      duration,
+		StartLocation: r.StartLocation,
+		EndLocation:   r.EndLocation,
+		VehicleID:     r.VehicleID,
+		StartMileAge:  r.StartMileAge,
+		EndMileAge:    r.EndMileAge,
+		ClientTime:    r.ClientTime,
+	}
+	return out, nil
+}
 
 // addRecord 添加一条新的记录
 func addRecord(c echo.Context) error {
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
 
-	req := new(reqAddRecord)
+	req := new(addRecordRequest)
 	if err := c.Bind(req); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
-	r, err := req.constructToRecord(uid)
+	in, err := req.toCreateRecordInput(uid)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
-	if err = r.Add(); err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
-	}
-	return c.JSON(http.StatusOK, r)
-}
-
-// getLatestRecord 获取上一条记录
-func getLatestRecord(c echo.Context) error {
-
-	uid, _ := c.Get("user").(primitive.ObjectID)
-
-	r, err := model.GetLastestRecord(uid)
-	if err != nil {
-		return err
-	}
-
-	notesMap, err := model.GetNotesByRecordIDs([]primitive.ObjectID{r.ID})
-	if err != nil {
-		return err
-	}
-
-	respRecord := &respRecord{
-		Record: *r,
-		Notes:  notesMap[r.ID],
-	}
-
-	return c.JSON(http.StatusOK, respRecord)
-}
-
-// deleteLatestRecord 删除上一条记录
-func deleteLatestRecord(c echo.Context) error {
-
-	uid, _ := c.Get("user").(primitive.ObjectID)
-
-	req := new(reqRecord)
-	var err error
-	if req.ID, err = primitive.ObjectIDFromHex(c.Param("id")); err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
-	}
-
-	if err := req.deleteRecord(uid); err != nil {
-		return err
-	}
-	return c.JSON(http.StatusOK, "success")
-}
-
-// getRecords 获取记录
-func getRecords(c echo.Context) error {
-
-	req := new(reqRecords)
-	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
-	}
-	uid, _ := c.Get("user").(primitive.ObjectID)
-
-	if req.DriverID != uid.Hex() {
-		return c.JSON(http.StatusUnauthorized, "driver has no authorization")
-	}
-
-	records, err := req.getRecords()
+	resp, err := service.CreateRecord(in)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
-	return c.JSON(http.StatusOK, records)
-}
 
-// addNote 为记录添加笔记
-func addNote(c echo.Context) error {
-	req := new(reqAddNote)
-	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
-	}
-
-	uid, _ := c.Get("user").(primitive.ObjectID)
-	if !req.isDriversRecord(uid) {
-		return c.JSON(http.StatusUnauthorized, "driver has no authorization")
-	}
-
-	var (
-		note model.INote
-		err  error
-	)
-
-	switch req.NoteType {
-	case model.OTHERWORKNOTE:
-		note, err = req.constructToOtherWorkNote()
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, err.Error())
-		}
-	case model.MODIFICATIONNOTE:
-		note, err = req.constructToModificationNote(uid)
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, err.Error())
-		}
-	case model.TRIPNOTE:
-		note, err = req.constructToTripNote()
-		if err != nil {
-			log.Println(err)
-			return c.JSON(http.StatusBadRequest, err.Error())
-		}
-
-	default:
-		return c.JSON(http.StatusBadRequest, "no match noteType")
-	}
-
-	if err = note.Add(); err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
-	}
-
-	return c.JSON(http.StatusOK, note)
+	return c.JSON(http.StatusOK, resp)
 }
 
 // offlineSyncRecords 离线返回在线状态后记录同步
 // 1. 对records按照时间排序，检查相邻两条之间的时间位置是否准确
 // 2. 批量更新入数据库
 func offlineSyncRecords(c echo.Context) error {
+
 	uid, _ := c.Get("user").(primitive.ObjectID)
 
-	reqs := []reqAddRecord{}
-	log := &logInternals.AddLogRequest{
-		Type:    "error",
-		FromFun: "offlineSyncRecords",
-		From:    &uid,
-	}
-
+	reqs := []*addRecordRequest{}
 	if err := c.Bind(&reqs); err != nil {
-		e := err.Error()
-		log.Message = &e
-		go logInternals.AddLog(log)
-		return c.JSON(http.StatusBadRequest, e)
-	}
-	l := len(reqs)
-	if l == 0 {
-		e := "no records obtained"
-		log.Message = &e
-		go logInternals.AddLog(log)
-		return c.JSON(http.StatusBadRequest, e)
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	sort.Slice(reqs, func(a, b int) bool {
 		return reqs[a].Time.Before(reqs[b].Time)
 	})
 
-	records := model.Records{}
+	l := len(reqs)
+	inputs := make([]*service.CreateRecordInput, l)
 	for i := 0; i < l; i++ {
-		r, err := reqs[i].constructToSyncRecord(uid)
+		input, err := reqs[i].toCreateRecordInput(uid)
 		if err != nil {
-			e := err.Error()
-			log.Message = &e
-			go logInternals.AddLog(log)
-			return err
+			return c.JSON(http.StatusBadRequest, err.Error())
 		}
-		records = append(records, *r)
+		inputs = append(inputs, input)
 	}
 
-	if err := records.SyncAdd(); err != nil {
-		e := err.Error()
-		log.Message = &e
-		go logInternals.AddLog(log)
-		return c.JSON(http.StatusBadRequest, e)
+	resp, err := service.SyncRecords(inputs)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
-	return c.JSON(http.StatusOK, records)
+	return c.JSON(http.StatusOK, resp)
 
 }
 
-// Transport operator 权限下的record操作
+// getLatestRecord 获取上一条记录
+func getLatestRecord(c echo.Context) error {
+	uid, _ := c.Get("user").(primitive.ObjectID)
+	resp, err := service.GetLastestRecord(uid)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+	return c.JSON(http.StatusOK, resp)
+}
+
+// deleteLatestRecord 删除上一条记录
+func deleteLatestRecord(c echo.Context) error {
+
+	uid, _ := c.Get("user").(primitive.ObjectID)
+	recordID, err := primitive.ObjectIDFromHex(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	if err := service.DeleteLatestRecord(&service.DeleteLatestRecordInput{
+		RecordID: recordID,
+		DriverID: uid,
+	}); err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, "success")
+}
+
+// GetRecordsRequest 获取记录请求参数
+type GetRecordsRequest struct {
+	DriverID string    `query:"driverID"`
+	From     time.Time `query:"from"`
+	To       time.Time `query:"to"`
+}
+
+// getRecords 获取记录
+func getRecords(c echo.Context) error {
+
+	req := new(GetRecordsRequest)
+	if err := c.Bind(req); err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	uid, _ := c.Get("user").(primitive.ObjectID)
+	if req.DriverID != uid.Hex() {
+		return c.JSON(http.StatusUnauthorized, "driver has no authorization")
+	}
+
+	records, err := service.GetRecords(&service.GetRecordsInput{
+		DriverID: req.DriverID,
+		From:     req.From,
+		To:       req.To,
+	})
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, records)
+}
+
+type addNoteRequest struct {
+	service.AddNoteInput `json:",inline"`
+}
+
+// addNote 司机为记录添加笔记
+func addNote(c echo.Context) error {
+	req := new(addNoteRequest)
+	if err := c.Bind(req); err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	uid, _ := c.Get("user").(primitive.ObjectID)
+	req.By = uid
+
+	if !req.AddNoteInput.IsDriversRecord(uid) {
+		return c.JSON(http.StatusBadRequest, "driver has no authorization")
+	}
+
+	note, err := service.AddNote(&req.AddNoteInput)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, note)
+}
+
+/************************************************************************************************/
+/************************** Transport operator 权限下的record操作 *********************************/
+/************************************************************************************************/
+type toGetRecordsRequest struct {
+	service.GetRecordsInput
+}
+
 // toGetRecords 获取记录
 func toGetRecords(c echo.Context) error {
 
-	req := new(reqRecords)
+	req := new(toGetRecordsRequest)
 	if err := c.Bind(req); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	var (
-		uid primitive.ObjectID
-		did primitive.ObjectID
-		tid primitive.ObjectID
+		uid primitive.ObjectID // userID
+		did primitive.ObjectID // driverID
+		tid primitive.ObjectID // toID
 		err error
 	)
 	uid, _ = c.Get("user").(primitive.ObjectID)
@@ -218,7 +223,7 @@ func toGetRecords(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, "to has no authorization")
 	}
 
-	records, err := req.getRecords()
+	records, err := service.GetRecords(&req.GetRecordsInput)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}

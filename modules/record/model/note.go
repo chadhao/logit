@@ -4,43 +4,26 @@ import (
 	"context"
 	"time"
 
-	valid "github.com/asaskevich/govalidator"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// INote 笔记接口
-type INote interface {
-	Add() error
-}
-
 // Note 笔记
 type Note struct {
-	ID        primitive.ObjectID `bson:"_id" json:"id" valid:"-"`
-	RecordID  primitive.ObjectID `bson:"recordID" json:"recordID" valid:"required"`
-	Type      NoteType           `bson:"noteType" json:"noteType" valid:"required"`
-	Comment   string             `bson:"comment" json:"comment" valid:"-"`
-	CreatedAt time.Time          `bson:"createdAt" json:"createdAt" valid:"required"`
-}
-
-func (n *Note) valid() error {
-	_, err := valid.ValidateStruct(n)
-	return err
+	ID        primitive.ObjectID `bson:"_id" json:"id"`
+	RecordID  primitive.ObjectID `bson:"recordID" json:"recordID"`
+	Type      NoteType           `bson:"noteType" json:"noteType"`
+	Comment   string             `bson:"comment" json:"comment"`
+	CreatedAt time.Time          `bson:"createdAt" json:"createdAt"`
 }
 
 // SystemNote 系统笔记
 type SystemNote struct {
-	Note `bson:",inline" valid:"-"`
+	Note `bson:",inline"`
 }
 
 // Add 系统笔记添加到数据库
 func (sn *SystemNote) Add() error {
-	if _, err := valid.ValidateStruct(sn); err != nil {
-		return err
-	}
-	if err := sn.Note.valid(); err != nil {
-		return err
-	}
 	// 数据库添加记录
 	if _, err := noteCollection.InsertOne(context.TODO(), sn); err != nil {
 		return err
@@ -50,17 +33,11 @@ func (sn *SystemNote) Add() error {
 
 // OtherWorkNote 其它笔记
 type OtherWorkNote struct {
-	Note `bson:",inline" valid:"-"`
+	Note `bson:",inline"`
 }
 
 // Add 其它笔记添加到数据库
 func (own *OtherWorkNote) Add() error {
-	if _, err := valid.ValidateStruct(own); err != nil {
-		return err
-	}
-	if err := own.Note.valid(); err != nil {
-		return err
-	}
 	// 数据库添加记录
 	if _, err := noteCollection.InsertOne(context.TODO(), own); err != nil {
 		return err
@@ -70,18 +47,12 @@ func (own *OtherWorkNote) Add() error {
 
 // ModificationNote 人为修改笔记
 type ModificationNote struct {
-	Note `bson:",inline" valid:"-"`
-	By   primitive.ObjectID `bson:"by" json:"by" valid:"required"`
+	Note `bson:",inline"`
+	By   primitive.ObjectID `bson:"by" json:"by"`
 }
 
 // Add 人为修改笔记添加到数据库
 func (mn *ModificationNote) Add() error {
-	if _, err := valid.ValidateStruct(mn); err != nil {
-		return err
-	}
-	if err := mn.Note.valid(); err != nil {
-		return err
-	}
 	// 数据库添加记录
 	if _, err := noteCollection.InsertOne(context.TODO(), mn); err != nil {
 		return err
@@ -91,23 +62,16 @@ func (mn *ModificationNote) Add() error {
 
 // TripNote 行程笔记
 type TripNote struct {
-	Note                `bson:",inline" valid:"-"`
-	TransportOperatorID primitive.ObjectID `bson:"transportOperatorID" json:"transportOperatorID" valid:"required"`
-	StartTime           time.Time          `bson:"startTime" json:"startTime" valid:"required"`
-	EndTime             time.Time          `bson:"endTime" json:"endTime" valid:"required"`
-	StartLocation       Location           `bson:"startLocation" json:"startLocation" valid:"required"`
-	EndLocation         Location           `bson:"endLocation" json:"endLocation" valid:"required"`
+	Note                `bson:",inline"`
+	TransportOperatorID primitive.ObjectID `bson:"transportOperatorID" json:"transportOperatorID"`
+	StartTime           time.Time          `bson:"startTime" json:"startTime"`
+	EndTime             time.Time          `bson:"endTime" json:"endTime"`
+	StartLocation       Location           `bson:"startLocation" json:"startLocation"`
+	EndLocation         Location           `bson:"endLocation" json:"endLocation"`
 }
 
 // Add 行程笔记添加到数据库
 func (tn *TripNote) Add() error {
-	if _, err := valid.ValidateStruct(tn); err != nil {
-		return err
-	}
-	if err := tn.Note.valid(); err != nil {
-		return err
-	}
-
 	// 数据库添加记录
 	if _, err := noteCollection.InsertOne(context.TODO(), tn); err != nil {
 		return err

@@ -55,12 +55,17 @@ func (q *QueryLogOpt) query() bson.D {
 	if q.FromFun != nil {
 		query = append(query, primitive.E{Key: "fromFun", Value: *q.FromFun})
 	}
-	if !q.From.IsZero() {
-		query = append(query, primitive.E{Key: "createdAt", Value: primitive.E{Key: "$gte", Value: q.From}})
+	if q.To.IsZero() {
+		q.To = time.Now()
 	}
-	if !q.To.IsZero() {
-		query = append(query, primitive.E{Key: "createdAt", Value: primitive.E{Key: "$lte", Value: q.To}})
-	}
+	query = append(query, primitive.E{
+		Key: "createdAt",
+		Value: bson.D{
+			primitive.E{Key: "$gte", Value: q.From},
+			primitive.E{Key: "$lte", Value: q.To},
+		},
+	})
+
 	return query
 }
 

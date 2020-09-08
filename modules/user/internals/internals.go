@@ -5,9 +5,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// HasAccessTo 判断A用户是否有权限查询B用户
-func HasAccessTo(adminIDPlus, driverID, transportOperatorID primitive.ObjectID) bool {
-	return model.HasAccessTo(adminIDPlus, driverID, transportOperatorID)
+// HasAccessTo 判断userID用户是拥有TO中的ADMIN以上权限，并且driverID用户也从属于这个TO
+func HasAccessTo(userID, driverID, transportOperatorID primitive.ObjectID) bool {
+	return model.HasAccessTo(userID, driverID, transportOperatorID)
 }
 
 // GetVehicleMapByIDs 通过vehicleIDs获取vehicleID对应的其具体信息的vehicleMap

@@ -2,94 +2,14 @@ package model
 
 import (
 	"context"
-	"errors"
-	"math"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"go.mongodb.org/mongo-driver/bson"
 
-	valid "github.com/asaskevich/govalidator"
-
-	locModel "github.com/chadhao/logit/modules/location/model"
-	"github.com/chadhao/logit/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
-
-type (
-	// Type 记录类型
-	Type string
-	// NoteType 笔记类型
-	NoteType string
-	// HrTime 重要时间点
-	HrTime float64
-)
-
-const (
-	// WORK 工作记录类型
-	WORK Type = "work"
-	// REST 休息记录类型
-	REST Type = "rest"
-)
-const (
-	// SYSTEMNOTE 系统笔记类型
-	SYSTEMNOTE NoteType = "system"
-	// MODIFICATIONNOTE 人为修改笔记类型
-	MODIFICATIONNOTE NoteType = "modification"
-	// TRIPNOTE 行程笔记类型
-	TRIPNOTE NoteType = "trip"
-	// OTHERWORKNOTE 其它笔记类型
-	OTHERWORKNOTE NoteType = "others"
-)
-
-const (
-	// HR0D5 0.5小时
-	HR0D5 HrTime = 0.5
-	// HR5D5 5.5小时
-	HR5D5 HrTime = 5.5
-	// HR7 7.5小时
-	HR7 HrTime = 7
-	// HR10 10小时
-	HR10 HrTime = 10
-	// HR13 13小时
-	HR13 HrTime = 13
-	// HR24 24小时
-	HR24 HrTime = 24
-	// HR70 70小时
-	HR70 HrTime = 70
-)
-
-func (t HrTime) getHrs() float64 {
-	return float64(t)
-}
-
-// Location 位置信息
-type Location struct {
-	Address locModel.Address `bson:"address,omitempty" json:"address,omitempty" valid:"-"`
-	Coors   locModel.Coors   `bson:"coors,omitempty" json:"coors,omitempty" valid:"-"`
-}
-
-func (l *Location) equal(o *Location) bool {
-	return l.Address == o.Address
-}
-
-// fillFull 若其中一项不完整，则用另外一项查找并补完
-func (l *Location) fillFull() (err error) {
-	if l.Address != "" && !l.Coors.EmptyCoors() {
-		return
-	}
-	if l.Address == "" && l.Coors.EmptyCoors() {
-		return errors.New("at least one field requried")
-	}
-	if l.Address == "" {
-		l.Address, err = l.Coors.GetAddrFromCoors()
-	} else {
-		l.Coors, err = l.Address.GetCoorsFromAddr()
-	}
-	return
-}
 
 // Record 记录
 // time为生成record的标准时间
@@ -112,93 +32,66 @@ type Record struct {
 }
 
 // Add 记录添加
-func (r *Record) Add() (err error) {
+func (r *Record) Add(lastRec *Record) (err error) {
+	// 数据库添加新记录，增加active; 并去除上一条record的active
+	db.Client().UseSession(context.TODO(), func(sessionContext mongo.SessionContext) error {
+		// 使用事务
+		if err := sessionContext.StartTransaction(); err != nil {
+			return err
+		}
 
-	lastRec, err := GetLastestRecord(r.DriverID)
-	if err != nil && err != mongo.ErrNoDocuments {
-		return err
+		// 添加记录
+		_, err = recordCollection.InsertOne(context.TODO(), r)
+
+		// 去除上一条record的active
+		if (Record{}) != *lastRec {
+			if err := lastRec.SetActiveStatus(false); err != nil {
+				sessionContext.AbortTransaction(sessionContext)
+				return err
+			}
+		}
+		return sessionContext.CommitTransaction(sessionContext)
+	})
+	return nil
+}
+
+// SetActiveStatus 记录改变active状态
+func (r *Record) SetActiveStatus(active bool) (err error) {
+	update := bson.M{"$unset": bson.M{"active": ""}}
+	if active {
+		update = bson.M{"$set": bson.M{"active": active}}
 	}
 
-	if err = r.beforeAdd(lastRec); err != nil {
+	if _, err = recordCollection.UpdateOne(context.TODO(), bson.M{"_id": r.ID}, update); err != nil {
 		return
 	}
-
-	// 数据库更新添加记录，去除上一条record的active,当前record增加active
-	if _, err = recordCollection.UpdateOne(context.TODO(), bson.M{"_id": lastRec.ID}, bson.M{"$unset": bson.M{"active": ""}}); err != nil {
-		return
-	}
-	active := true
 	r.Active = &active
-	if _, err = recordCollection.InsertOne(context.TODO(), r); err != nil {
-		return
-	}
 	return
 }
 
 // Delete 记录删除
-func (r *Record) Delete() error {
-	if r.DeletedAt != nil {
-		return errors.New("record has already been deleted")
-	}
+func (r *Record) Delete(lastRec *Record) error {
 
-	lastest, err := GetLastestRecord(r.DriverID)
-	if err != mongo.ErrNoDocuments {
-		if err != nil {
+	db.Client().UseSession(context.TODO(), func(sessionContext mongo.SessionContext) error {
+		// 使用事务
+		if err := sessionContext.StartTransaction(); err != nil {
 			return err
 		}
-		if lastest.ID != r.ID {
-			return errors.New("record is not the lastest one")
-		}
-	}
 
-	// 数据库记录添加删除标记
-	if err != mongo.ErrNoDocuments {
+		update := bson.M{"$set": bson.M{"deletedAt": time.Now()}, "$unset": bson.M{"active": ""}}
+		if _, err := recordCollection.UpdateOne(context.TODO(), bson.M{"_id": r.ID}, update); err != nil {
+			return err
+		}
+
 		// 为上一条record添加active
-		active := true
-		update := bson.M{"$set": bson.M{"active": &active}}
-		if _, err := recordCollection.UpdateOne(context.TODO(), bson.M{"_id": lastest.ID}, update); err != nil {
-			return err
+		if (Record{}) != *lastRec {
+			if err := lastRec.SetActiveStatus(true); err != nil {
+				sessionContext.AbortTransaction(sessionContext)
+				return err
+			}
 		}
-	}
-	update := bson.M{"$set": bson.M{"deletedAt": time.Now()}, "$unset": bson.M{"active": ""}}
-	if _, err := recordCollection.UpdateOne(context.TODO(), bson.M{"_id": r.ID}, update); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *Record) beforeAdd(lastRec *Record) error {
-	if (Record{}) != *lastRec {
-		if lastRec.Type == r.Type {
-			return errors.New("work type conflict with last record")
-		}
-		if lastRec.Time.After(r.Time) {
-			return errors.New("time conflict with last record")
-		}
-		if !r.StartLocation.equal(&lastRec.EndLocation) {
-			return errors.New("location not match")
-		}
-		if r.StartMileAge != nil && !utils.AlmostEqual(*r.StartMileAge, *lastRec.EndMileAge) {
-			return errors.New("mileage not match")
-		}
-		if math.Abs(lastRec.Time.Add(r.Duration).Sub(r.Time).Seconds()) > 10 {
-			return errors.New("time and duration not match")
-		}
-	}
-
-	if err := r.EndLocation.fillFull(); err != nil {
-		return err
-	}
-
-	return r.valid()
-}
-
-func (r *Record) valid() error {
-	// 1. 验证记录结构是否完整
-	if _, err := valid.ValidateStruct(r); err != nil {
-		return err
-	}
-	// 2. 验证记录内容, TBC...
+		return sessionContext.CommitTransaction(sessionContext)
+	})
 	return nil
 }
 
@@ -212,13 +105,14 @@ func (r *Record) isLatestRecord() bool {
 
 // GetLastestRecord 获取最近的一条记录
 func GetLastestRecord(driverID primitive.ObjectID) (*Record, error) {
-	lastRec := new(Record)
 
+	lastRec := new(Record)
 	err := recordCollection.FindOne(context.TODO(), bson.M{"driverID": driverID, "active": true}).Decode(lastRec)
-	if err == mongo.ErrNoDocuments {
-		opts := options.FindOne().SetSort(bson.D{{Key: "time", Value: -1}})
-		err = recordCollection.FindOne(context.TODO(), bson.M{"driverID": driverID, "deletedAt": nil}, opts).Decode(lastRec)
-	}
+	// // 按时间排序后找到最近的一条数据
+	// if err == mongo.ErrNoDocuments {
+	// 	opts := options.FindOne().SetSort(bson.D{{Key: "time", Value: -1}})
+	// 	err = recordCollection.FindOne(context.TODO(), bson.M{"driverID": driverID, "deletedAt": nil}, opts).Decode(lastRec)
+	// }
 	return lastRec, err
 }
 
@@ -229,17 +123,35 @@ func GetRecord(id primitive.ObjectID) (*Record, error) {
 	return r, err
 }
 
+// GetRecordsOpt 获取用户时间段内的记录选项
+type GetRecordsOpt struct {
+	From       time.Time
+	To         time.Time
+	GetDeleted bool
+}
+
 // GetRecords 获取用户时间段内的记录
-func GetRecords(driverID primitive.ObjectID, from, to time.Time, getDeleted bool) ([]Record, error) {
-	records := []Record{}
-	filter := bson.M{
-		"driverID": driverID,
-		"time":     bson.M{"$gte": from, "$lte": to},
+func GetRecords(driverID primitive.ObjectID, opt ...GetRecordsOpt) ([]*Record, error) {
+	query := bson.D{primitive.E{Key: "driverID", Value: driverID}}
+	if len(opt) == 1 {
+		if opt[0].To.IsZero() {
+			opt[0].To = time.Now()
+		}
+		query = append(query, primitive.E{
+			Key: "time",
+			Value: bson.D{
+				primitive.E{Key: "$gte", Value: opt[0].From},
+				primitive.E{Key: "$lte", Value: opt[0].To},
+			},
+		})
+
+		if !opt[0].GetDeleted {
+			query = append(query, primitive.E{Key: "deletedAt", Value: nil})
+		}
 	}
-	if !getDeleted {
-		filter["deletedAt"] = nil
-	}
-	cursor, err := recordCollection.Find(context.TODO(), filter)
+
+	records := []*Record{}
+	cursor, err := recordCollection.Find(context.TODO(), query)
 	if err != nil {
 		return nil, err
 	}
@@ -250,41 +162,34 @@ func GetRecords(driverID primitive.ObjectID, from, to time.Time, getDeleted bool
 }
 
 // Records .
-type Records []Record
+type Records []*Record
 
 // SyncAdd 批量上传添加
-func (rs Records) SyncAdd() (err error) {
-
-	lastRec, err := GetLastestRecord(rs[0].DriverID)
-	if err != nil && err != mongo.ErrNoDocuments {
-		return err
-	}
-	lastRecID := lastRec.ID
-
-	l := len(rs)
-	for i := 0; i < l; i++ {
-		if err = rs[i].beforeAdd(lastRec); err != nil {
-			return
+func (rs Records) SyncAdd(lastRec *Record) error {
+	// 数据库添加新记录; 去除上一条record的active
+	db.Client().UseSession(context.TODO(), func(sessionContext mongo.SessionContext) error {
+		// 使用事务
+		if err := sessionContext.StartTransaction(); err != nil {
+			return err
 		}
-		lastRec = &rs[i]
-	}
-	// 为最后一条record添加active,去除上次record的active
-	active := true
-	rs[l-1].Active = &active
 
-	if err != mongo.ErrNoDocuments {
-		if _, err = recordCollection.UpdateOne(context.TODO(), bson.M{"_id": lastRecID}, bson.M{"$unset": bson.M{"active": ""}}); err != nil {
-			return
+		rsI := make([]interface{}, len(rs))
+		for i := range rs {
+			rsI[i] = rs[i]
 		}
-	}
+		// 数据库添加记录
+		if _, err := recordCollection.InsertMany(context.TODO(), rsI); err != nil {
+			return err
+		}
 
-	// 数据库添加记录
-	rsI := make([]interface{}, l)
-	for i := range rs {
-		rsI[i] = rs[i]
-	}
-	if _, err = recordCollection.InsertMany(context.TODO(), rsI); err != nil {
-		return
-	}
-	return
+		// 去除上一条record的active
+		if (Record{}) != *lastRec {
+			if err := lastRec.SetActiveStatus(false); err != nil {
+				sessionContext.AbortTransaction(sessionContext)
+				return err
+			}
+		}
+		return sessionContext.CommitTransaction(sessionContext)
+	})
+	return nil
 }
