@@ -1,31 +1,34 @@
 package internals
 
 import (
-	"time"
+	"errors"
 
 	"github.com/chadhao/logit/modules/log/model"
+	"github.com/chadhao/logit/modules/log/service"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// ReqAddLog .
-type ReqAddLog struct {
-	Type    string              `json:"type" bson:"type" valid:"required"`
-	Message *string             `json:"message,omitempty" bson:"message,omitempty"`
-	FromFun string              `json:"fromFun" bson:"fromFun" valid:"required"`
-	From    *primitive.ObjectID `json:"from,omitempty" bson:"from,omitempty"`
-	Content interface{}         `json:"content" bson:"content"`
+// AddLogRequest 创建日志内部请求参数
+type AddLogRequest struct {
+	Type    string
+	Message *string
+	FromFun string
+	From    *primitive.ObjectID
+	Content interface{}
 }
 
-// AddLog 添加log
-func AddLog(r *ReqAddLog) error {
-	log := &model.Log{
-		ID:        primitive.NewObjectID(),
-		Type:      interface{}(r.Type).(model.Type),
-		Message:   r.Message,
-		FromFun:   r.FromFun,
-		From:      r.From,
-		Content:   r.Content,
-		CreatedAt: time.Now(),
+// AddLog 创建日志
+func AddLog(in *AddLogRequest) error {
+	createLogInput := &service.CreateLogInput{
+		Message: in.Message,
+		FromFun: in.FromFun,
+		From:    in.From,
+		Content: in.Content,
 	}
-	return log.Add()
+	var ok = false
+	if createLogInput.Type, ok = interface{}(in.Type).(model.Type); !ok {
+		return errors.New("type not correct")
+	}
+	_, err := service.CreateLog(createLogInput)
+	return err
 }

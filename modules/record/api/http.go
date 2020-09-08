@@ -146,7 +146,7 @@ func offlineSyncRecords(c echo.Context) error {
 	uid, _ := c.Get("user").(primitive.ObjectID)
 
 	reqs := []reqAddRecord{}
-	log := &logInternals.ReqAddLog{
+	log := &logInternals.AddLogRequest{
 		Type:    "error",
 		FromFun: "offlineSyncRecords",
 		From:    &uid,

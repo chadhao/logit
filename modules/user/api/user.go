@@ -146,7 +146,7 @@ func UserUpdate(c echo.Context) error {
 
 	// log 记录
 	go func(from *primitive.ObjectID, content interface{}) {
-		log := &logInternals.ReqAddLog{
+		log := &logInternals.AddLogRequest{
 			Type:    "modification",
 			FromFun: "UserUpdate",
 			From:    from,

@@ -3,7 +3,6 @@ package model
 import (
 	"time"
 
-	valid "github.com/asaskevich/govalidator"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/net/context"
@@ -25,50 +24,55 @@ const (
 
 // Log .
 type Log struct {
-	ID        primitive.ObjectID  `bson:"_id" json:"id" valid:"-"`
-	Type      Type                `json:"type" bson:"type" valid:"required"`
+	ID        primitive.ObjectID  `json:"id" bson:"_id"`
+	Type      Type                `json:"type" bson:"type"`
 	Message   *string             `json:"message,omitempty" bson:"message,omitempty"`
-	FromFun   string              `json:"fromFun" bson:"fromFun" valid:"required"`
+	FromFun   string              `json:"fromFun" bson:"fromFun"`
 	From      *primitive.ObjectID `json:"from,omitempty" bson:"from,omitempty"`
 	Content   interface{}         `json:"content" bson:"content"`
-	CreatedAt time.Time           `bson:"createdAt" json:"createdAt" valid:"required"`
+	CreatedAt time.Time           `json:"createdAt" bson:"createdAt"`
 }
 
 // Add 数据库添加记录
 func (l *Log) Add() error {
-	if _, err := valid.ValidateStruct(l); err != nil {
-		return err
-	}
-	if _, err := logCollection.InsertOne(context.TODO(), l); err != nil {
-		return err
-	}
-	return nil
+	_, err := logCollection.InsertOne(context.TODO(), l)
+	return err
 }
 
-// QueryLog .
-type QueryLog struct {
+// QueryLogOpt 查询日志选项
+type QueryLogOpt struct {
 	Type    *Type     `json:"type,omitempty"`
 	FromFun *string   `json:"fromFun,omitempty"`
-	From    time.Time `json:"from" valid:"required"`
-	To      time.Time `json:"to" valid:"required"`
+	From    time.Time `json:"from"`
+	To      time.Time `json:"to"`
 }
 
-// Find .
-func (q *QueryLog) Find() ([]Log, error) {
-	if _, err := valid.ValidateStruct(q); err != nil {
-		return nil, err
-	}
-	logs := []Log{}
-	filter := bson.M{
-		"createdAt": bson.M{"$gte": q.From, "$lte": q.To},
-	}
+func (q *QueryLogOpt) query() bson.D {
+	query := bson.D{}
 	if q.Type != nil {
-		filter["type"] = *q.Type
+		query = append(query, primitive.E{Key: "type", Value: *q.Type})
 	}
 	if q.FromFun != nil {
-		filter["fromFun"] = *q.FromFun
+		query = append(query, primitive.E{Key: "fromFun", Value: *q.FromFun})
 	}
-	cursor, err := logCollection.Find(context.TODO(), filter)
+	if !q.From.IsZero() {
+		query = append(query, primitive.E{Key: "createdAt", Value: primitive.E{Key: "$gte", Value: q.From}})
+	}
+	if !q.To.IsZero() {
+		query = append(query, primitive.E{Key: "createdAt", Value: primitive.E{Key: "$lte", Value: q.To}})
+	}
+	return query
+}
+
+// QueryLogs 查询日志
+func QueryLogs(opt QueryLogOpt) ([]*Log, error) {
+	query := opt.query()
+	if len(query) == 0 {
+		query = nil
+	}
+
+	logs := []*Log{}
+	cursor, err := logCollection.Find(context.TODO(), query)
 	if err != nil {
 		return nil, err
 	}
