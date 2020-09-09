@@ -18,7 +18,7 @@ func loadRoutes(r router.Router) {
 	r.Add(&router.Route{
 		Path:    "/user/existance",
 		Method:  http.MethodPost,
-		Handler: api.CheckExistance,
+		Handler: api.CheckUserExistance,
 	})
 	r.Add(&router.Route{
 		Path:    "/user/login/password",
@@ -33,7 +33,7 @@ func loadRoutes(r router.Router) {
 	r.Add(&router.Route{
 		Path:    "/user",
 		Method:  http.MethodGet,
-		Handler: api.GetUserInfo,
+		Handler: api.UserInfoGet,
 		Roles:   []int{constant.ROLE_USER_DEFAULT},
 	})
 	r.Add(&router.Route{
@@ -155,7 +155,7 @@ func loadRoutes(r router.Router) {
 	r.Add(&router.Route{
 		Path:    "/user/vehicles",
 		Method:  http.MethodGet,
-		Handler: api.GetVehicles,
+		Handler: api.VehiclesGet,
 		Roles:   []int{constant.ROLE_DRIVER},
 	})
 }

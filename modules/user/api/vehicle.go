@@ -3,107 +3,107 @@ package api
 import (
 	"net/http"
 
-	"github.com/chadhao/logit/modules/user/model"
-	"github.com/chadhao/logit/modules/user/request"
+	"github.com/chadhao/logit/modules/user/service"
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// VehicleCreate 添加车辆信息
 func VehicleCreate(c echo.Context) error {
-	vr := request.VehicleCreateRequest{}
 
-	if err := c.Bind(&vr); err != nil {
+	req := new(service.VehicleCreateInput)
+	if err := c.Bind(req); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
 
-	vr.DriverID = uid
-	vehicle, err := vr.Create()
+	if req.DriverID.IsZero() {
+		req.DriverID = uid
+	}
+	if req.DriverID != uid {
+		return c.JSON(http.StatusBadRequest, "not allowed")
+	}
+
+	resp, err := service.VehicleCreate(req)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, vehicle)
+	return c.JSON(http.StatusOK, resp.Vehicle)
 }
 
-func VehicleDelete(c echo.Context) error {
+type vehicleDeleteRequest struct {
+	VehicleID primitive.ObjectID `json:"id"`
+}
 
-	vr := struct {
-		ID primitive.ObjectID `json:"id"`
-	}{}
-	if err := c.Bind(&vr); err != nil {
+// VehicleDelete 删除车辆信息
+func VehicleDelete(c echo.Context) error {
+	req := new(vehicleDeleteRequest)
+	if err := c.Bind(req); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
 
-	vehicle := &model.Vehicle{
-		ID: vr.ID,
-	}
-	if err := vehicle.Find(); err != nil {
-		return c.JSON(http.StatusNotFound, err.Error())
-	}
-	if vehicle.DriverID != uid {
-		return c.JSON(http.StatusUnauthorized, "no authorization")
-	}
-
-	if err := vehicle.Delete(); err != nil {
+	err := service.VehicleDelete(&service.VehicleDeleteInput{VehicleID: req.VehicleID, UserID: uid})
+	if err != nil {
 		return err
 	}
 
 	return c.JSON(http.StatusOK, "deleted")
 }
 
-func VehicleGet(c echo.Context) error {
-
-	vr := struct {
-		ID string `json:"id" query:"id"`
-	}{}
-	if err := c.Bind(&vr); err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
-	}
-
-	uid, _ := c.Get("user").(primitive.ObjectID)
-	vid, err := primitive.ObjectIDFromHex(vr.ID)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
-	}
-
-	vehicle := &model.Vehicle{
-		ID: vid,
-	}
-	if err := vehicle.Find(); err != nil {
-		return c.JSON(http.StatusNotFound, err.Error())
-	}
-	if vehicle.DriverID != uid {
-		return c.JSON(http.StatusUnauthorized, "no authorization")
-	}
-
-	return c.JSON(http.StatusOK, vehicle)
+type vehicleGetRequest struct {
+	VehicleID string `json:"id" query:"id"`
 }
 
-func GetVehicles(c echo.Context) error {
-	vr := struct {
-		DriverID string `json:"driverID" query:"driverID"`
-	}{}
-	if err := c.Bind(&vr); err != nil {
+// VehicleGet 获取车辆信息
+func VehicleGet(c echo.Context) error {
+
+	req := new(vehicleGetRequest)
+	if err := c.Bind(req); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
-	driverID, err := primitive.ObjectIDFromHex(vr.DriverID)
+	uid, _ := c.Get("user").(primitive.ObjectID)
+
+	vehicleID, err := primitive.ObjectIDFromHex(req.VehicleID)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	resp, err := service.VehicleGet(&service.VehicleGetInput{VehicleID: vehicleID, UserID: uid})
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, resp.Vehicle)
+}
+
+type vehiclesGetRequest struct {
+	DriverID string `json:"driverID" query:"driverID"`
+}
+
+// VehiclesGet 查询司机的车辆群信息
+func VehiclesGet(c echo.Context) error {
+	req := new(vehiclesGetRequest)
+	if err := c.Bind(req); err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	driverID, err := primitive.ObjectIDFromHex(req.DriverID)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	uid, _ := c.Get("user").(primitive.ObjectID)
+
 	if uid != driverID {
 		return c.JSON(http.StatusUnauthorized, "no authorization")
 	}
-	vehicle := &model.Vehicle{
-		DriverID: driverID,
-	}
-	vehicles, err := vehicle.FindByDriverID()
+
+	resp, err := service.VehiclesGet(&service.VehiclesGetInput{DriverID: driverID})
 	if err != nil {
 		return c.JSON(http.StatusNotFound, err.Error())
 	}
-	return c.JSON(http.StatusOK, vehicles)
+	return c.JSON(http.StatusOK, resp.Vehicles)
 }

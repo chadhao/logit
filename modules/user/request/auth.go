@@ -5,20 +5,17 @@ import (
 	"time"
 
 	valid "github.com/asaskevich/govalidator"
-	"github.com/chadhao/logit/config"
 	msgApi "github.com/chadhao/logit/modules/message/internals"
 
 	"github.com/chadhao/logit/modules/user/constant"
 	"github.com/chadhao/logit/modules/user/model"
 	"github.com/chadhao/logit/utils"
-	"github.com/dgrijalva/jwt-go"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type (
-	RefreshTokenRequest struct {
-		Token string `json:"token"`
-	}
+	// RefreshTokenRequest struct {
+	// 	Token string `json:"token"`
+	// }
 	LoginRequest struct {
 		Phone    string `json:"phone"`
 		Email    string `json:"email"`
@@ -38,90 +35,90 @@ type (
 		Email string `query:"email" valid:"email"`
 		Token string `query:"token" valid:"required"`
 	}
-	ForgetPasswordRequest struct {
-		Phone    string `json:"phone" valid:"numeric,stringlength(8|11),optional"`
-		Email    string `json:"email" valid:"email,optional"`
-		Token    string `json:"token" valid:"required"`
-		Password string `json:"password" valid:"stringlength(6|32)"`
-	}
+	// ForgetPasswordRequest struct {
+	// 	Phone    string `json:"phone" valid:"numeric,stringlength(8|11),optional"`
+	// 	Email    string `json:"email" valid:"email,optional"`
+	// 	Token    string `json:"token" valid:"required"`
+	// 	Password string `json:"password" valid:"stringlength(6|32)"`
+	// }
 )
 
-func (r *RefreshTokenRequest) Validate(c config.Config) (*model.User, error) {
-	u := model.User{}
+// func (r *RefreshTokenRequest) Validate(c config.Config) (*model.User, error) {
+// 	u := model.User{}
 
-	key, _ := c.Get("system.jwt.refresh.key")
-	keyFunc := func(t *jwt.Token) (interface{}, error) {
-		return []byte(key), nil
-	}
-	token, err := jwt.Parse(r.Token, keyFunc)
-	if err != nil {
-		return nil, err
-	}
+// 	key, _ := c.Get("system.jwt.refresh.key")
+// 	keyFunc := func(t *jwt.Token) (interface{}, error) {
+// 		return []byte(key), nil
+// 	}
+// 	token, err := jwt.Parse(r.Token, keyFunc)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	claims := token.Claims.(jwt.MapClaims)
-	userID, err := primitive.ObjectIDFromHex(claims["sub"].(string))
-	if err != nil {
-		return nil, err
-	}
-	u.ID = userID
+// 	claims := token.Claims.(jwt.MapClaims)
+// 	userID, err := primitive.ObjectIDFromHex(claims["sub"].(string))
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	u.ID = userID
 
-	return &u, nil
-}
+// 	return &u, nil
+// }
 
-func (r *LoginRequest) PasswordLogin() (*model.User, error) {
-	u := model.User{}
+// func (r *LoginRequest) PasswordLogin() (*model.User, error) {
+// 	u := model.User{}
 
-	if len(r.Phone) > 0 || len(r.Email) > 0 {
-		u.Phone = r.Phone
-		u.Email = r.Email
-		u.Password = r.Password
-		if err := u.PasswordLogin(); err != nil {
-			return nil, err
-		}
-	} else {
-		d := model.Driver{
-			LicenseNumber: r.License,
-		}
-		if err := d.Find(); err != nil {
-			return nil, errors.New("user not found")
-		}
-		u.ID = d.ID
-		u.Password = r.Password
-		if err := u.PasswordLogin(); err != nil {
-			return nil, err
-		}
-	}
+// 	if len(r.Phone) > 0 || len(r.Email) > 0 {
+// 		u.Phone = r.Phone
+// 		u.Email = r.Email
+// 		u.Password = r.Password
+// 		if err := u.PasswordLogin(); err != nil {
+// 			return nil, err
+// 		}
+// 	} else {
+// 		d := model.Driver{
+// 			LicenseNumber: r.License,
+// 		}
+// 		if err := d.Find(); err != nil {
+// 			return nil, errors.New("user not found")
+// 		}
+// 		u.ID = d.ID
+// 		u.Password = r.Password
+// 		if err := u.PasswordLogin(); err != nil {
+// 			return nil, err
+// 		}
+// 	}
 
-	return &u, nil
-}
+// 	return &u, nil
+// }
 
-func (e *EmailVerifyRequest) Verify() (*model.User, error) {
-	if _, err := valid.ValidateStruct(e); err != nil {
-		return nil, err
-	}
+// func (e *EmailVerifyRequest) Verify() (*model.User, error) {
+// 	if _, err := valid.ValidateStruct(e); err != nil {
+// 		return nil, err
+// 	}
 
-	red := model.Redis{Key: e.Email}
-	if token, err := red.Get(); err != nil || e.Token != token {
-		return nil, errors.New("token does not match")
-	}
+// 	red := model.Redis{Key: e.Email}
+// 	if token, err := red.Get(); err != nil || e.Token != token {
+// 		return nil, errors.New("token does not match")
+// 	}
 
-	u := &model.User{
-		Email: e.Email,
-	}
+// 	u := &model.User{
+// 		Email: e.Email,
+// 	}
 
-	if err := u.Find(); err != nil {
-		return nil, err
-	}
+// 	if err := u.Find(); err != nil {
+// 		return nil, err
+// 	}
 
-	u.IsEmailVerified = true
-	if err := u.Update(); err != nil {
-		return nil, err
-	}
+// 	u.IsEmailVerified = true
+// 	if err := u.Update(); err != nil {
+// 		return nil, err
+// 	}
 
-	red.Expire()
+// 	red.Expire()
 
-	return u, nil
-}
+// 	return u, nil
+// }
 
 func (r *ExistanceRequest) Check() map[string]bool {
 	result := make(map[string]bool, 0)

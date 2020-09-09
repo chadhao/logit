@@ -3,56 +3,48 @@ package api
 import (
 	"net/http"
 
-	"github.com/chadhao/logit/modules/user/model"
-	"github.com/chadhao/logit/modules/user/request"
+	"github.com/chadhao/logit/modules/user/service"
 	"github.com/labstack/echo/v4"
 )
 
+// CheckVerificationCode 手机验证码验证
 func CheckVerificationCode(c echo.Context) error {
-	vr := struct {
-		Phone string `json:"phone"`
-		Code  string `json:"code"`
-	}{}
-	if err := c.Bind(&vr); err != nil {
+	req := new(service.CheckVerificationCodeInput)
+	if err := c.Bind(req); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
-	red := model.Redis{Key: vr.Phone}
-	code, err := red.Get()
-	if err != nil {
-		return err
+	if err := service.CheckVerificationCode(req); err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
-	if vr.Code != code {
-		return c.JSON(http.StatusBadRequest, "verification code does not match")
-	}
+
 	return c.JSON(http.StatusOK, "ok")
 }
 
+// EmailVerify 邮箱验证
 func EmailVerify(c echo.Context) error {
-	er := request.EmailVerifyRequest{}
-	html := "<h1>Hi there,</h1><p>Your email has been verified!</p>"
-
-	if err := c.Bind(&er); err != nil {
-		html = "<h1>Bad request</h1><p>" + err.Error() + "</p>"
-		return c.HTML(http.StatusBadRequest, html)
-	}
-	if _, err := er.Verify(); err != nil {
-		html = "<h1>Bad request</h1><p>" + err.Error() + "</p>"
-		return c.HTML(http.StatusBadRequest, html)
+	req := new(service.EmailVerifyInput)
+	if err := c.Bind(req); err != nil {
+		return c.HTML(http.StatusBadRequest, "<h1>Bad request</h1><p>"+err.Error()+"</p>")
 	}
 
-	return c.HTML(http.StatusOK, html)
+	out, err := service.EmailVerify(req)
+	if err != nil {
+		return c.HTML(http.StatusBadRequest, out.HTML)
+	}
+
+	return c.HTML(http.StatusOK, out.HTML)
 }
 
+// GetVerification 发送手机或邮箱验证码
 func GetVerification(c echo.Context) error {
-	vr := request.VerificationRequest{}
 
-	if err := c.Bind(&vr); err != nil {
+	req := new(service.SendVerificationInput)
+	if err := c.Bind(req); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
-
-	if err := vr.Send(); err != nil {
-		return err
+	if err := service.SendVerification(req); err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, "ok")

@@ -3,76 +3,117 @@ package model
 import (
 	"context"
 	"errors"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func (d *Driver) Create() error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+// Driver 司机身份信息
+type Driver struct {
+	ID            primitive.ObjectID `json:"id" bson:"_id"`
+	LicenseNumber string             `json:"licenseNumber" bson:"licenseNumber"`
+	DateOfBirth   time.Time          `json:"dateOfBirth" bson:"dateOfBirth"`
+	Firstnames    string             `json:"firstnames" bson:"firstnames"`
+	Surname       string             `json:"surname" bson:"surname"`
+	CreatedAt     time.Time          `json:"createdAt" bson:"createdAt"`
+}
 
-	if d.Exists() {
-		return errors.New("Driver exists")
-	}
+// Create 创建司机身份
+func (d *Driver) Create(user *User) error {
+	// 创建司机身份后，更新用户基础信息
+	db.Client().UseSession(context.TODO(), func(sessionContext mongo.SessionContext) error {
+		// 使用事务
+		if err := sessionContext.StartTransaction(); err != nil {
+			return err
+		}
+		if _, err := driverCollection.InsertOne(context.TODO(), d); err != nil {
+			return err
+		}
 
-	driverBson, err := bson.Marshal(d)
-	if err != nil {
-		return err
-	}
-
-	if _, err := db.Collection("driver").InsertOne(ctx, driverBson); err != nil {
-		return err
-	}
+		// 用户相关信息更新
+		if err := user.Update(); err != nil {
+			sessionContext.AbortTransaction(sessionContext)
+			return err
+		}
+		return sessionContext.CommitTransaction(sessionContext)
+	})
 
 	return nil
 }
 
-func (d *Driver) Exists() bool {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	conditions := primitive.A{}
-	if !d.ID.IsZero() {
-		conditions = append(conditions, bson.D{{"_id", d.ID}})
-	}
-	if len(d.LicenseNumber) > 0 {
-		conditions = append(conditions, bson.D{{"licenseNumber", d.LicenseNumber}})
-	}
-
-	filter := bson.D{{"$or", conditions}}
-
-	if count, _ := db.Collection("driver").CountDocuments(ctx, filter); count > 0 {
-		return true
-	}
-
-	return false
+// DriverExistsOpt 司机是否存在选项
+type DriverExistsOpt struct {
+	ID            primitive.ObjectID
+	LicenseNumber string
 }
 
-func (d *Driver) Find() error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	var filter bson.D
-	if !d.ID.IsZero() {
-		filter = bson.D{{"_id", d.ID}}
-	} else if len(d.LicenseNumber) > 0 {
-		filter = bson.D{{"licenseNumber", d.LicenseNumber}}
+// IsDriverExists 判断司机是否存在
+func IsDriverExists(opt DriverExistsOpt) bool {
+	conditions := bson.D{}
+	if !opt.ID.IsZero() {
+		conditions = append(conditions, primitive.E{Key: "_id", Value: opt.ID})
 	}
-
-	err := db.Collection("driver").FindOne(ctx, filter).Decode(d)
-
-	if err != nil {
-		return err
+	if len(opt.LicenseNumber) > 0 {
+		conditions = append(conditions, primitive.E{Key: "licenseNumber", Value: opt.LicenseNumber})
 	}
+	query := bson.D{{"$or", conditions}}
 
-	return nil
+	count, _ := userCollection.CountDocuments(context.TODO(), query)
+	return count > 0
 }
 
-func GetDrivers(driverIDs []primitive.ObjectID) ([]Driver, error) {
-	drivers := []Driver{}
+// FindDriverOpt 查找司机选项
+type FindDriverOpt struct {
+	ID            primitive.ObjectID
+	LicenseNumber string
+}
 
-	cursor, err := db.Collection("driver").Find(context.TODO(), bson.M{"_id": bson.M{"$in": driverIDs}})
+// FindDriver 查找司机
+func FindDriver(opt FindDriverOpt) (*Driver, error) {
+
+	query := bson.D{}
+	switch {
+	case !opt.ID.IsZero():
+		query = bson.D{{"_id", opt.ID}}
+	case len(opt.LicenseNumber) > 0:
+		query = bson.D{{"licenseNumber", opt.LicenseNumber}}
+	default:
+		return nil, errors.New("No query condition found")
+	}
+
+	driver := &Driver{}
+	err := driverCollection.FindOne(context.TODO(), query).Decode(driver)
+	return driver, err
+}
+
+// func (d *Driver) Find() error {
+// 	ctx, cancel := context.WithCancel(context.Background())
+// 	defer cancel()
+
+// 	var filter bson.D
+// 	if !d.ID.IsZero() {
+// 		filter = bson.D{{"_id", d.ID}}
+// 	} else if len(d.LicenseNumber) > 0 {
+// 		filter = bson.D{{"licenseNumber", d.LicenseNumber}}
+// 	}
+
+// 	err := db.Collection("driver").FindOne(ctx, filter).Decode(d)
+
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	return nil
+// }
+
+// GetDrivers 通过IDs查询司机
+func GetDrivers(driverIDs []primitive.ObjectID) ([]*Driver, error) {
+
+	drivers := []*Driver{}
+
+	cursor, err := driverCollection.Find(context.TODO(), bson.M{"_id": bson.M{"$in": driverIDs}})
 	if err != nil {
 		return nil, err
 	}

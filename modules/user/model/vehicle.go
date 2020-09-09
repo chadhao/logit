@@ -2,100 +2,80 @@ package model
 
 import (
 	"context"
-	"errors"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// Vehicle 车辆信息
+type Vehicle struct {
+	ID           primitive.ObjectID `json:"id" bson:"_id"`
+	DriverID     primitive.ObjectID `json:"driverID" bson:"driverID"`
+	Registration string             `json:"registration" bson:"registration"`
+	IsDiesel     bool               `json:"isDiesel" bson:"isDiesel"`
+	CreatedAt    time.Time          `json:"createdAt" bson:"createdAt"`
+}
+
+// Create 创建车辆信息
 func (v *Vehicle) Create() error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if v.Exists() {
-		return errors.New("Vehicle exists")
-	}
-
-	v.ID = primitive.NewObjectID()
-
-	vehicleBson, err := bson.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	if _, err := db.Collection("vehicle").InsertOne(ctx, vehicleBson); err != nil {
-		return err
-	}
-
-	return nil
+	_, err := vehicleCollection.InsertOne(context.TODO(), v)
+	return err
 }
 
+// Delete 删除车辆信息
 func (v *Vehicle) Delete() error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	filter := bson.D{{"_id", v.ID}}
-
-	if _, err := db.Collection("vehicle").DeleteOne(ctx, filter); err != nil {
-		return err
-	}
-
-	return nil
+	_, err := vehicleCollection.DeleteOne(context.TODO(), filter)
+	return err
 }
 
-func (v *Vehicle) Exists() bool {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+// VehicleExistsOpt 车辆是否存在选项
+type VehicleExistsOpt struct {
+	DriverID     primitive.ObjectID
+	Registration string
+}
+
+// IsVehicleExists 车辆是否存在
+func IsVehicleExists(opt VehicleExistsOpt) bool {
+
 	conditions := primitive.A{
-		bson.D{{"driverID", v.DriverID}},
-		bson.D{{"registration", v.Registration}},
+		bson.D{{"driverID", opt.DriverID}},
+		bson.D{{"registration", opt.Registration}},
 	}
-
 	filter := bson.D{{"$and", conditions}}
+	count, _ := vehicleCollection.CountDocuments(context.TODO(), filter)
 
-	if count, _ := db.Collection("vehicle").CountDocuments(ctx, filter); count > 0 {
-		return true
-	}
-
-	return false
+	return count > 0
 }
 
-func (v *Vehicle) Find() error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	filter := bson.D{{"_id", v.ID}}
-
-	err := db.Collection("vehicle").FindOne(ctx, filter).Decode(v)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+// FindVehicle 通过vehicleID获取vehicle信息
+func FindVehicle(vehicleID primitive.ObjectID) (*Vehicle, error) {
+	vehicle := &Vehicle{}
+	err := vehicleCollection.FindOne(context.TODO(), bson.D{{"_id", vehicleID}}).Decode(vehicle)
+	return vehicle, err
 }
 
-func (v *Vehicle) FindByDriverID() ([]Vehicle, error) {
-	vehicles := []Vehicle{}
-	filter := bson.M{
-		"driverID": v.DriverID,
-	}
-
-	cursor, err := db.Collection("vehicle").Find(context.TODO(), filter)
-	if err != nil {
-		return nil, err
-	}
-	if err = cursor.All(context.TODO(), &vehicles); err != nil {
-		return nil, err
-	}
-	return vehicles, nil
+// FindVehiclesOpt 获取vehicles信息选项
+type FindVehiclesOpt struct {
+	DriverID   primitive.ObjectID
+	VehicleIDs []primitive.ObjectID
 }
 
-// FindVehiclesByIDs 获取对应vehicleIDs的对应vehicle信息
-func FindVehiclesByIDs(vehicleIDs []primitive.ObjectID) ([]Vehicle, error) {
-	vehicles := []Vehicle{}
+// FindVehicles 获取vehicles信息
+func FindVehicles(opt ...FindVehiclesOpt) ([]*Vehicle, error) {
+	query := bson.D{}
+	if len(opt) == 1 {
+		if !opt[0].DriverID.IsZero() {
+			query = append(query, primitive.E{Key: "driverID", Value: opt[0].DriverID})
+		}
+		if len(opt[0].VehicleIDs) > 0 {
+			query = append(query, primitive.E{Key: "_id", Value: primitive.E{Key: "$in", Value: opt[0].VehicleIDs}})
+		}
+	}
 
-	cursor, err := db.Collection("vehicle").Find(context.TODO(), bson.M{"_id": bson.M{"$in": vehicleIDs}})
+	vehicles := []*Vehicle{}
+	cursor, err := vehicleCollection.Find(context.TODO(), query)
 	if err != nil {
 		return nil, err
 	}

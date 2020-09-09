@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-redis/redis/v7"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -10,13 +11,17 @@ import (
 )
 
 var (
-	config      map[string]string
-	mongoClient *mongo.Client
-	redisClient *redis.Client
-	db          *mongo.Database
+	// RedisClient redis client
+	RedisClient       *redis.Client
+	config            map[string]string
+	mongoClient       *mongo.Client
+	db                *mongo.Database
+	userCollection    *mongo.Collection
+	driverCollection  *mongo.Collection
+	vehicleCollection *mongo.Collection
 )
 
-func connect() error {
+func connect() (err error) {
 	uri := config["user.db.uri"]
 	username := config["user.db.username"]
 	password := config["user.db.password"]
@@ -25,18 +30,20 @@ func connect() error {
 	redisAddr := config["user.redis.address"]
 	redisPass := config["user.redis.password"]
 
-	var err error
-	ctx, cancel := context.WithCancel(context.Background())
-	connectionString := fmt.Sprintf("mongodb+srv://%s:%s@%s/test?retryWrites=true&w=majority", username, password, uri)
-	mongoClient, err = mongo.Connect(ctx, options.Client().ApplyURI(connectionString))
-	cancel()
-
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	mgoURI := fmt.Sprintf("mongodb+srv://%s:%s@%s/test?retryWrites=true&w=majority", username, password, uri)
+	mongoClient, err = mongo.Connect(ctx, options.Client().ApplyURI(mgoURI))
 	if err != nil {
 		return err
 	}
 
 	db = mongoClient.Database(database)
-	redisClient = redis.NewClient(&redis.Options{
+	userCollection = db.Collection("user")
+	driverCollection = db.Collection("driver")
+	vehicleCollection = db.Collection("vehicle")
+
+	RedisClient = redis.NewClient(&redis.Options{
 		Addr:     redisAddr,
 		Password: redisPass,
 		DB:       0,
@@ -45,6 +52,7 @@ func connect() error {
 	return nil
 }
 
+// New 创建数据库连接并传入config
 func New(c map[string]string) error {
 	config = c
 
@@ -55,6 +63,7 @@ func New(c map[string]string) error {
 	return nil
 }
 
+// Close 关闭
 func Close() {
 	ctx, cancel := context.WithCancel(context.Background())
 	mongoClient.Disconnect(ctx)
