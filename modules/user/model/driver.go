@@ -58,7 +58,7 @@ func IsDriverExists(opt DriverExistsOpt) bool {
 	if len(opt.LicenseNumber) > 0 {
 		conditions = append(conditions, primitive.E{Key: "licenseNumber", Value: opt.LicenseNumber})
 	}
-	query := bson.D{{"$or", conditions}}
+	query := bson.D{primitive.E{Key: "$or", Value: conditions}}
 
 	count, _ := userCollection.CountDocuments(context.TODO(), query)
 	return count > 0
@@ -76,9 +76,9 @@ func FindDriver(opt FindDriverOpt) (*Driver, error) {
 	query := bson.D{}
 	switch {
 	case !opt.ID.IsZero():
-		query = bson.D{{"_id", opt.ID}}
+		query = bson.D{primitive.E{Key: "_id", Value: opt.ID}}
 	case len(opt.LicenseNumber) > 0:
-		query = bson.D{{"licenseNumber", opt.LicenseNumber}}
+		query = bson.D{primitive.E{Key: "licenseNumber", Value: opt.LicenseNumber}}
 	default:
 		return nil, errors.New("No query condition found")
 	}
@@ -88,28 +88,8 @@ func FindDriver(opt FindDriverOpt) (*Driver, error) {
 	return driver, err
 }
 
-// func (d *Driver) Find() error {
-// 	ctx, cancel := context.WithCancel(context.Background())
-// 	defer cancel()
-
-// 	var filter bson.D
-// 	if !d.ID.IsZero() {
-// 		filter = bson.D{{"_id", d.ID}}
-// 	} else if len(d.LicenseNumber) > 0 {
-// 		filter = bson.D{{"licenseNumber", d.LicenseNumber}}
-// 	}
-
-// 	err := db.Collection("driver").FindOne(ctx, filter).Decode(d)
-
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
-
-// GetDrivers 通过IDs查询司机
-func GetDrivers(driverIDs []primitive.ObjectID) ([]*Driver, error) {
+// FindDrivers 通过IDs查询司机
+func FindDrivers(driverIDs []primitive.ObjectID) ([]*Driver, error) {
 
 	drivers := []*Driver{}
 

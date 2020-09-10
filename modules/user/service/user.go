@@ -5,7 +5,9 @@ import (
 	"time"
 
 	valid "github.com/asaskevich/govalidator"
+	"github.com/chadhao/logit/modules/user/constant"
 	"github.com/chadhao/logit/modules/user/model"
+	"github.com/chadhao/logit/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -131,4 +133,110 @@ func UserExistanceCheck(in *UserExistanceCheckInput) map[string]bool {
 		result["email"] = model.IsUserExists(model.UserExistsOpt{Email: in.Email})
 	}
 	return result
+}
+
+type (
+	// UserInfoFindInput 查询用户基础及相关信息参数
+	UserInfoFindInput struct {
+		UserID primitive.ObjectID
+	}
+	// UserInfoFindOutput 查询用户基础及相关信息返回参数
+	UserInfoFindOutput struct {
+		ID              primitive.ObjectID                       `json:"id"`
+		Phone           string                                   `json:"phone"`
+		Email           string                                   `json:"email"`
+		IsEmailVerified bool                                     `json:"isEmailVerified"`
+		IsDriver        bool                                     `json:"isDriver"`
+		RoleIDs         []int                                    `json:"roleIDs"`
+		CreatedAt       time.Time                                `json:"createdAt"`
+		Driver          *model.Driver                            `json:"driver,omitempty"`
+		Identities      []*model.TransportOperatorIdentityDetail `json:"identities,omitempty"`
+	}
+)
+
+// Format .
+func (r *UserInfoFindOutput) Format(user *model.User, driver *model.Driver, identities []*model.TransportOperatorIdentityDetail) {
+	r.ID = user.ID
+	r.Phone = user.Phone
+	r.Email = user.Email
+	r.IsEmailVerified = user.IsEmailVerified
+	r.IsDriver = user.IsDriver
+	r.RoleIDs = user.RoleIDs
+	r.CreatedAt = user.CreatedAt
+	if !driver.ID.IsZero() {
+		r.Driver = driver
+	}
+	if len(identities) > 0 {
+		r.Identities = identities
+	}
+}
+
+// UserInfoFind 查询用户基础及相关信息
+func UserInfoFind(in *UserInfoFindInput) (*UserInfoFindOutput, error) {
+	user, err := model.FindUser(model.FindUserOpt{UserID: in.UserID})
+	if err != nil {
+		return nil, err
+	}
+
+	driver := &model.Driver{}
+	if utils.RolesAssert(user.RoleIDs).Is(constant.ROLE_DRIVER) {
+		driver, _ = model.FindDriver(model.FindDriverOpt{ID: user.ID})
+	}
+
+	tois, _ := model.TransportOperatorIdentityFilter(model.TransportOperatorIdentityFilterOpt{
+		UserID: user.ID,
+	})
+
+	out := &UserInfoFindOutput{}
+	out.Format(user, driver, tois)
+
+	return out, nil
+}
+
+type (
+	// UserQueryInput 查询用户基础及相关信息参数
+	UserQueryInput struct {
+		Phone string `json:"phone" valid:"stringlength(4|11)"`
+		Email string `json:"email" valid:"stringlength(4|50)"`
+	}
+	// UserQueryOutput 查询用户基础及相关信息返回参数
+	UserQueryOutput struct {
+		UserInfo []*UserInfoFindOutput
+	}
+)
+
+// UserQuery 查询用户群基础及相关信息
+func UserQuery(in *UserQueryInput) (*UserQueryOutput, error) {
+	// 参数验证
+	if _, err := valid.ValidateStruct(in); err != nil {
+		return nil, err
+	}
+
+	// 查询用户
+	users, err := model.FilterUser(model.FilterUserOpt{Phone: in.Phone, Email: in.Email})
+	if err != nil {
+		return nil, err
+	}
+
+	// 查询司机信息
+	uids := []primitive.ObjectID{}
+	for _, v := range users {
+		uids = append(uids, v.ID)
+	}
+	driversMap := make(map[primitive.ObjectID]*model.Driver)
+	drivers, _ := model.FindDrivers(uids)
+	for _, driver := range drivers {
+		driversMap[driver.ID] = driver
+	}
+
+	// 查询角色身份信息
+	identitiesMap, _ := model.GetIdentitiesByUserIDs(uids)
+
+	out := &UserQueryOutput{}
+	for _, user := range users {
+		uinfo := &UserInfoFindOutput{}
+		uinfo.Format(user, driversMap[user.ID], identitiesMap[user.ID])
+		out.UserInfo = append(out.UserInfo, uinfo)
+	}
+	return out, nil
 }

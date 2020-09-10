@@ -19,6 +19,9 @@ var (
 	userCollection    *mongo.Collection
 	driverCollection  *mongo.Collection
 	vehicleCollection *mongo.Collection
+	toCollection      *mongo.Collection // transportOperatorCollection
+	toICollection     *mongo.Collection // transportOperatorIdentityCollection
+
 )
 
 func connect() (err error) {
@@ -42,6 +45,8 @@ func connect() (err error) {
 	userCollection = db.Collection("user")
 	driverCollection = db.Collection("driver")
 	vehicleCollection = db.Collection("vehicle")
+	toCollection = db.Collection("transportOperator")
+	toICollection = db.Collection("transportOperatorIdentity")
 
 	RedisClient = redis.NewClient(&redis.Options{
 		Addr:     redisAddr,

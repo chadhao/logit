@@ -5,355 +5,381 @@ import (
 	"errors"
 	"time"
 
+	"github.com/chadhao/logit/modules/user/constant"
+	"github.com/chadhao/logit/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func (t *TransportOperator) Create() error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+type (
+	// TOIdentity transport operator identity
+	TOIdentity string
+)
 
-	if t.Exists() {
-		return errors.New("Transport operator exists")
+const (
+	// TO_ADMIN admin
+	TO_ADMIN TOIdentity = "to_admin"
+	// TO_SUPER super
+	TO_SUPER TOIdentity = "to_super"
+	// TO_DRIVER driver
+	TO_DRIVER TOIdentity = "to_driver"
+)
+
+// GetRole 获取role
+func (t TOIdentity) GetRole() int {
+	identity := -1
+	switch {
+	case t == TO_SUPER:
+		identity = constant.ROLE_TO_SUPER
+	case t == TO_ADMIN:
+		identity = constant.ROLE_TO_ADMIN
+	case t == TO_DRIVER:
+		identity = constant.ROLE_DRIVER
+	}
+	return identity
+}
+
+type (
+	// TransportOperator TO组织信息
+	TransportOperator struct {
+		ID            primitive.ObjectID `json:"id" bson:"_id"`
+		LicenseNumber string             `json:"licenseNumber" bson:"licenseNumber"`
+		Name          string             `json:"name" bson:"name"`
+		IsVerified    bool               `json:"isVerified" bson:"isVerified"`
+		IsCompany     bool               `json:"isCompany" bson:"isCompany"`
+		CreatedAt     time.Time          `json:"createdAt" bson:"createdAt"`
 	}
 
-	toBson, err := bson.Marshal(t)
-	if err != nil {
-		return err
+	// TransportOperatorIdentity TO用户身份信息
+	TransportOperatorIdentity struct {
+		ID                  primitive.ObjectID `json:"id" bson:"_id"`
+		UserID              primitive.ObjectID `json:"userID" bson:"userID"`
+		TransportOperatorID primitive.ObjectID `json:"transportOperatorID" bson:"transportOperatorID"`
+		Identity            TOIdentity         `json:"identity" bson:"identity"`
+		Contact             *string            `json:"contact" bson:"contact"`
+		CreatedAt           time.Time          `json:"createdAt" bson:"createdAt"`
 	}
 
-	if _, err := db.Collection("transportOperator").InsertOne(ctx, toBson); err != nil {
-		return err
+	// TransportOperatorIdentityDetail TO用户身份信息和其所属组织信息
+	TransportOperatorIdentityDetail struct {
+		ID                  primitive.ObjectID `json:"id" bson:"_id"`
+		UserID              primitive.ObjectID `json:"userID" bson:"userID"`
+		TransportOperatorID primitive.ObjectID `json:"transportOperatorID" bson:"transportOperatorID"`
+		Identity            TOIdentity         `json:"identity" bson:"identity"`
+		Contact             *string            `json:"contact" bson:"contact"`
+		CreatedAt           time.Time          `json:"createdAt" bson:"createdAt"`
+		TransportOperator   *TransportOperator `json:"transportOperator" bson:"transportOperator"`
 	}
+)
 
+// Create 创建TO组织信息
+func (t *TransportOperator) Create(user *User) error {
+	db.Client().UseSession(context.TODO(), func(sessionContext mongo.SessionContext) error {
+		// 使用事务
+		if err := sessionContext.StartTransaction(); err != nil {
+			return err
+		}
+		// 创建TO组织信息
+		if _, err := toCollection.InsertOne(context.TODO(), t); err != nil {
+			return err
+		}
+		// 该TO创建super身份
+		superIdentity := &TransportOperatorIdentity{
+			ID:                  primitive.NewObjectID(),
+			UserID:              user.ID,
+			TransportOperatorID: t.ID,
+			Identity:            TO_SUPER,
+			CreatedAt:           time.Now(),
+		}
+		if err := superIdentity.Create(user); err != nil {
+			sessionContext.AbortTransaction(sessionContext)
+			return err
+		}
+		// 自雇性质时，当user已经有driver信息时，自动添加为TO下driver身份
+		if !t.IsCompany {
+			if _, err := FindDriver(FindDriverOpt{ID: user.ID}); err == nil {
+				driverIdentity := &TransportOperatorIdentity{
+					ID:                  primitive.NewObjectID(),
+					UserID:              user.ID,
+					TransportOperatorID: t.ID,
+					Identity:            TO_DRIVER,
+					CreatedAt:           time.Now(),
+				}
+				if err := driverIdentity.Create(user); err != nil {
+					sessionContext.AbortTransaction(sessionContext)
+					return err
+				}
+			}
+		}
+		return sessionContext.CommitTransaction(sessionContext)
+	})
 	return nil
 }
 
-func (t *TransportOperator) Exists() bool {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	conditions := primitive.A{}
-	if !t.ID.IsZero() {
-		conditions = append(conditions, bson.D{{"_id", t.ID}})
-	}
-	if len(t.LicenseNumber) > 0 {
-		conditions = append(conditions, bson.D{{"licenseNumber", t.LicenseNumber}})
-	}
-
-	filter := bson.D{{"$or", conditions}}
-
-	if count, _ := db.Collection("transportOperator").CountDocuments(ctx, filter); count > 0 {
-		return true
-	}
-
-	return false
+// TransportOperatorFindOpt 查询TO组织选项
+type TransportOperatorFindOpt struct {
+	ID            primitive.ObjectID
+	LicenseNumber string
 }
 
-func (t *TransportOperator) Find() error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	var filter bson.D
-	if !t.ID.IsZero() {
-		filter = bson.D{{"_id", t.ID}}
-	} else if len(t.LicenseNumber) > 0 {
-		filter = bson.D{{"licenseNumber", t.LicenseNumber}}
+// TransportOperatorFind 查询TO组织
+func TransportOperatorFind(opt TransportOperatorFindOpt) (*TransportOperator, error) {
+	conditions := bson.D{}
+	if !opt.ID.IsZero() {
+		conditions = append(conditions, primitive.E{Key: "_id", Value: opt.ID})
 	}
-
-	err := db.Collection("transportOperator").FindOne(ctx, filter).Decode(t)
-
-	if err != nil {
-		return err
+	if len(opt.LicenseNumber) > 0 {
+		conditions = append(conditions, primitive.E{Key: "licenseNumber", Value: opt.LicenseNumber})
 	}
+	query := bson.D{primitive.E{Key: "$or", Value: conditions}}
 
-	return nil
+	to := &TransportOperator{}
+	err := toCollection.FindOne(context.TODO(), query).Decode(to)
+	return to, err
 }
 
+// Update 更新TO组织信息
 func (t *TransportOperator) Update() error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	filter := bson.D{{"_id", t.ID}}
-	tBson, err := bson.Marshal(t)
-	if err != nil {
-		return err
-	}
-
-	result, err := db.Collection("transportOperator").ReplaceOne(ctx, filter, tBson)
-	if err != nil {
-		return nil
-	}
-	if result.MatchedCount != 1 {
+	filter := bson.D{primitive.E{Key: "_id", Value: t.ID}}
+	if result, _ := toCollection.ReplaceOne(context.TODO(), filter, t); result.MatchedCount != 1 {
 		return errors.New("transportOperator not updated")
 	}
 	return nil
 }
 
+// Delete 删除TO组织
 func (t *TransportOperator) Delete() error {
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	filter := bson.D{{"_id", t.ID}}
-
-	if _, err := db.Collection("transportOperator").DeleteOne(ctx, filter); err != nil {
-		return nil
-	}
-	return nil
-
-}
-
-func (f *TransportOperator) Filter(driverOrigin bool) ([]TransportOperator, error) {
-
-	tos := []TransportOperator{}
-
-	filter := bson.M{}
-	if driverOrigin {
-		filter["isVerified"] = true
-		filter["isCompany"] = true
-	}
-
-	if len(f.LicenseNumber) > 0 {
-		filter["licenseNumber"] = primitive.Regex{Pattern: f.LicenseNumber, Options: "i"}
-	}
-	if len(f.Name) > 0 {
-		filter["name"] = primitive.Regex{Pattern: f.Name, Options: "i"}
-	}
-
-	cursor, err := db.Collection("transportOperator").Find(context.TODO(), filter)
-	if err != nil {
-		return nil, err
-	}
-	if err = cursor.All(context.TODO(), &tos); err != nil {
-		return nil, err
-	}
-	return tos, nil
-}
-
-func (t *TransportOperator) AddIdentity(userID primitive.ObjectID, identity TOIdentity, contact *string) (*TransportOperatorIdentity, error) {
-
-	toI := &TransportOperatorIdentity{
-		ID:                  primitive.NewObjectID(),
-		TransportOperatorID: t.ID,
-		CreatedAt:           time.Now(),
-	}
-
-	// to super, to admin 用户在公司情况下需要填入contact信息
-	if t.IsCompany {
-		if contact == nil && identity != TO_DRIVER {
-			return nil, errors.New("contact is required")
-		}
-		toI.Contact = contact
-	} else { // 自雇形式
-		// 只能添加自己
-		// 添加为super, 只能存在一个super
-		if identity == TO_SUPER {
-			toI.Identity = TO_SUPER
-			if tos, _ := toI.Filter(); len(tos) >= 1 {
-				return nil, errors.New("can only have one super")
-			}
-		} else if identity == TO_DRIVER { // 只能将自己添加为driver
-			toI.Identity = TO_SUPER
-			tos, _ := toI.Filter()
-			if len(tos) == 0 {
-				return nil, errors.New("no super found")
-			}
-			if tos[0].UserID != userID {
-				return nil, errors.New("to super id and this id not match")
-			}
-
-			toI.Identity = TO_DRIVER
-			if tos, _ = toI.Filter(); len(tos) != 0 {
-				return nil, errors.New("has one driver already")
-			}
-		} else {
-			return nil, errors.New("identity can only be to super or driver")
-		}
-	}
-
-	toI.UserID = userID
-	toI.Identity = identity
-
-	if err := toI.create(); err != nil {
-		return nil, err
-	}
-	return toI, nil
-}
-
-func (t *TransportOperatorIdentity) Filter() ([]TransportOperatorIdentityDetail, error) {
-	tos := []TransportOperatorIdentityDetail{}
-	filter := bson.M{}
-	if !t.UserID.IsZero() {
-		filter["userID"] = t.UserID
-	}
-	if !t.TransportOperatorID.IsZero() {
-		filter["transportOperatorID"] = t.TransportOperatorID
-	}
-	if t.Identity != "" {
-		filter["identity"] = t.Identity
-	}
-	query := mongo.Pipeline{
-		bson.D{
-			{"$lookup", bson.D{
-				{"from", "transportOperator"},
-				{"localField", "transportOperatorID"},
-				{"foreignField", "_id"},
-				{"as", "transportOperator"},
-			}},
-		},
-		bson.D{
-			{"$match", filter},
-		},
-		bson.D{
-			{"$unwind", "$transportOperator"},
-		},
-	}
-	cursor, err := db.Collection("transportOperatorIdentity").Aggregate(context.TODO(), query)
-	if err != nil {
-		return nil, err
-	}
-	if err = cursor.All(context.TODO(), &tos); err != nil {
-		return nil, err
-	}
-	return tos, nil
-}
-
-func (t *TransportOperatorIdentity) Find() error {
-	err := db.Collection("transportOperatorIdentity").FindOne(context.TODO(), bson.M{"_id": t.ID}).Decode(t)
+	filter := bson.D{primitive.E{Key: "_id", Value: t.ID}}
+	_, err := toCollection.DeleteOne(context.TODO(), filter)
 	return err
 }
 
+// TransportOperatorFilterOpt TO组织过滤选项
+type TransportOperatorFilterOpt struct {
+	IsVerified    *bool
+	IsCompany     *bool
+	LicenseNumber string
+	Name          string
+}
+
+// TransportOperatorFilter TO组织过滤
+func TransportOperatorFilter(opt TransportOperatorFilterOpt) ([]*TransportOperator, error) {
+
+	tos := []*TransportOperator{}
+
+	filter := bson.M{}
+	if opt.IsVerified != nil {
+		filter["isVerified"] = *opt.IsVerified
+	}
+	if opt.IsCompany != nil {
+		filter["isCompany"] = *opt.IsCompany
+	}
+	if len(opt.LicenseNumber) > 0 {
+		filter["licenseNumber"] = primitive.Regex{Pattern: opt.LicenseNumber, Options: "i"}
+	}
+	if len(opt.Name) > 0 {
+		filter["name"] = primitive.Regex{Pattern: opt.Name, Options: "i"}
+	}
+
+	cursor, err := toCollection.Find(context.TODO(), filter)
+	if err != nil {
+		return nil, err
+	}
+	if err = cursor.All(context.TODO(), &tos); err != nil {
+		return nil, err
+	}
+	return tos, nil
+}
+
+// TransportOperatorIdentityFilterOpt TO组织下的用户身份信息过滤选项
+type TransportOperatorIdentityFilterOpt struct {
+	UserID              primitive.ObjectID
+	TransportOperatorID primitive.ObjectID
+	Identity            TOIdentity
+}
+
+// TransportOperatorIdentityFilter TO组织下的用户身份信息过滤
+func TransportOperatorIdentityFilter(opt TransportOperatorIdentityFilterOpt) ([]*TransportOperatorIdentityDetail, error) {
+	// 检索条件
+	filter := bson.M{}
+	if !opt.UserID.IsZero() {
+		filter["userID"] = opt.UserID
+	}
+	if !opt.TransportOperatorID.IsZero() {
+		filter["transportOperatorID"] = opt.TransportOperatorID
+	}
+	if opt.Identity != "" {
+		filter["identity"] = opt.Identity
+	}
+	// 按条件查询用户身份并获取对应的组织信息
+	query := mongo.Pipeline{
+		bson.D{
+			primitive.E{Key: "$lookup", Value: bson.D{
+				primitive.E{Key: "from", Value: "transportOperator"},
+				primitive.E{Key: "localField", Value: "transportOperatorID"},
+				primitive.E{Key: "foreignField", Value: "_id"},
+				primitive.E{Key: "as", Value: "transportOperator"},
+			}},
+		},
+		bson.D{
+			primitive.E{Key: "$match", Value: filter},
+		},
+		bson.D{
+			primitive.E{Key: "$unwind", Value: "$transportOperator"},
+		},
+	}
+
+	cursor, err := toICollection.Aggregate(context.TODO(), query)
+	if err != nil {
+		return nil, err
+	}
+
+	tos := []*TransportOperatorIdentityDetail{}
+	if err = cursor.All(context.TODO(), &tos); err != nil {
+		return nil, err
+	}
+	return tos, nil
+}
+
+// Create 创建TO用户身份
+func (t *TransportOperatorIdentity) Create(user *User) error {
+
+	db.Client().UseSession(context.TODO(), func(sessionContext mongo.SessionContext) error {
+		// 使用事务
+		if err := sessionContext.StartTransaction(); err != nil {
+			return err
+		}
+		// 创建TO用户身份
+		_, err := toICollection.InsertOne(context.TODO(), t)
+		if err != nil {
+			return err
+		}
+		// 更新用户信息
+		roleLen, roles := len(user.RoleIDs), utils.RolesAssert(user.RoleIDs)
+		switch {
+		case t.Identity == TO_SUPER && !roles.Is(constant.ROLE_TO_SUPER):
+			user.RoleIDs = append(user.RoleIDs, constant.ROLE_TO_SUPER)
+		case t.Identity == TO_ADMIN && !roles.Is(constant.ROLE_TO_ADMIN):
+			user.RoleIDs = append(user.RoleIDs, constant.ROLE_TO_ADMIN)
+		case t.Identity == TO_DRIVER && !roles.Is(constant.ROLE_DRIVER):
+			user.RoleIDs = append(user.RoleIDs, constant.ROLE_DRIVER)
+		}
+
+		if roleLen != len(user.RoleIDs) {
+			if err := user.Update(); err != nil {
+				sessionContext.AbortTransaction(sessionContext)
+				return err
+			}
+		}
+		return sessionContext.CommitTransaction(sessionContext)
+	})
+	return nil
+}
+
+// Delete 删除TO用户身份
+func (t *TransportOperatorIdentity) Delete(user *User) error {
+
+	db.Client().UseSession(context.TODO(), func(sessionContext mongo.SessionContext) error {
+		// 使用事务
+		if err := sessionContext.StartTransaction(); err != nil {
+			return err
+		}
+		if _, err := toICollection.DeleteOne(context.TODO(), bson.M{"_id": t.ID}); err != nil {
+			return err
+		}
+		// 删除后需要检查角色的role是否需要更新
+		toIs, err := TransportOperatorIdentityFilter(TransportOperatorIdentityFilterOpt{
+			UserID:   t.UserID,
+			Identity: t.Identity,
+		})
+		if err != nil {
+			sessionContext.AbortTransaction(sessionContext)
+			return err
+		}
+		if len(toIs) == 0 {
+			roles := utils.RolesAssert(user.RoleIDs)
+			identity := t.Identity.GetRole()
+			for i := 0; i < len(roles); i++ {
+				if roles[i] == identity {
+					roles = append(roles[:i], roles[i+1:]...)
+					user.RoleIDs = roles
+					if err := user.Update(); err != nil {
+						sessionContext.AbortTransaction(sessionContext)
+						return err
+					}
+					break
+				}
+			}
+		}
+
+		return sessionContext.CommitTransaction(sessionContext)
+	})
+	return nil
+}
+
+// TransportOperatorIdentityFind 查询TO组织的角色信息
+func TransportOperatorIdentityFind(TransportOperatorIdentityID primitive.ObjectID) (*TransportOperatorIdentity, error) {
+	out := &TransportOperatorIdentity{}
+	err := toICollection.FindOne(context.TODO(), bson.M{"_id": TransportOperatorIdentityID}).Decode(out)
+	return out, err
+}
+
+// UpdateContact 更新联系方式
 func (t *TransportOperatorIdentity) UpdateContact(contact string) error {
 	update := bson.M{"$set": bson.M{"contact": contact}}
 	_, err := db.Collection("transportOperatorIdentity").UpdateOne(context.TODO(), bson.M{"_id": t.ID}, update)
 	return err
 }
 
-func IsIdentity(uid, transportOperatorID primitive.ObjectID, identities []TOIdentity) bool {
-
-	filter := bson.M{
-		"userID":              uid,
-		"transportOperatorID": transportOperatorID,
-		"identity":            bson.M{"$in": identities},
-	}
-
-	if count, _ := db.Collection("transportOperatorIdentity").CountDocuments(context.TODO(), filter); count > 0 {
-		return true
-	}
-	return false
+// TransportOperatorIdentityExists 用户在改TO组织下的身份是否存在
+type TransportOperatorIdentityExists struct {
+	UserID              primitive.ObjectID
+	TransportOperatorID primitive.ObjectID
+	Identity            []TOIdentity // 如果此项长度大于1，则用户身份属于此种任意一中，都返回True
 }
 
-func HasAccessTo(adminIDPlus, driverID, transportOperatorID primitive.ObjectID) bool {
-	adminTos := []TransportOperatorIdentity{}
-	adminFilter := bson.M{
-		"userID":              adminIDPlus,
-		"transportOperatorID": transportOperatorID,
-		"identity":            bson.M{"$in": []TOIdentity{TO_ADMIN, TO_SUPER}},
-	}
-	cursor, err := db.Collection("transportOperatorIdentity").Find(context.TODO(), adminFilter)
-	if err != nil {
-		return false
-	}
-	if err = cursor.All(context.TODO(), &adminTos); err != nil {
-		return false
-	}
-
-	driverTos := []TransportOperatorIdentity{}
-	driverFilter := bson.M{
-		"userID":              driverID,
-		"transportOperatorID": transportOperatorID,
-		"identity":            TO_DRIVER,
-	}
-	cursor, err = db.Collection("transportOperatorIdentity").Find(context.TODO(), driverFilter)
-	if err != nil {
-		return false
-	}
-	if err = cursor.All(context.TODO(), &driverTos); err != nil {
-		return false
-	}
-
-	if len(adminTos) > 0 && len(driverTos) > 0 {
-		return true
-	}
-	return false
-}
-
-func (t *TransportOperatorIdentity) create() error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if t.exists() {
-		return errors.New("This identity exists")
-	}
-
-	toBson, err := bson.Marshal(t)
-	if err != nil {
-		return err
-	}
-
-	if _, err := db.Collection("transportOperatorIdentity").InsertOne(ctx, toBson); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (t *TransportOperatorIdentity) Delete() error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	if _, err := db.Collection("transportOperatorIdentity").DeleteOne(ctx, bson.M{"_id": t.ID}); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (t *TransportOperatorIdentity) exists() bool {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+// IsTransportOperatorIdentityExists 检查用户在改TO组织下的身份是否存在
+func IsTransportOperatorIdentityExists(opt TransportOperatorIdentityExists) bool {
 
 	conditions := primitive.A{
-		bson.D{{"userID", t.UserID}},
-		bson.D{{"transportOperatorID", t.TransportOperatorID}},
-		bson.D{{"identity", t.Identity}},
-		bson.D{{"deletedAt", nil}},
+		bson.D{primitive.E{Key: "userID", Value: opt.UserID}},
+		bson.D{primitive.E{Key: "transportOperatorID", Value: opt.TransportOperatorID}},
+		bson.D{primitive.E{Key: "identity", Value: primitive.E{Key: "$in", Value: opt.Identity}}},
+		bson.D{primitive.E{Key: "deletedAt", Value: nil}},
 	}
 
-	filter := bson.D{{"$and", conditions}}
+	filter := bson.D{primitive.E{Key: "$and", Value: conditions}}
 
-	if count, _ := db.Collection("transportOperatorIdentity").CountDocuments(ctx, filter); count > 0 {
-		return true
-	}
-
-	return false
+	count, _ := toICollection.CountDocuments(context.TODO(), filter)
+	return count > 0
 }
 
 // GetIdentitiesByUserIDs 批量通过userIDs获取他们相关的identity信息
-func GetIdentitiesByUserIDs(uids []primitive.ObjectID) (map[primitive.ObjectID][]TransportOperatorIdentityDetail, error) {
-	m := make(map[primitive.ObjectID][]TransportOperatorIdentityDetail)
-	var tois []TransportOperatorIdentityDetail
+func GetIdentitiesByUserIDs(uids []primitive.ObjectID) (map[primitive.ObjectID][]*TransportOperatorIdentityDetail, error) {
+	m := make(map[primitive.ObjectID][]*TransportOperatorIdentityDetail)
+	var tois []*TransportOperatorIdentityDetail
 	filter := bson.M{
 		"userID": bson.M{"$in": uids},
 	}
 
 	query := mongo.Pipeline{
 		bson.D{
-			{"$lookup", bson.D{
-				{"from", "transportOperator"},
-				{"localField", "transportOperatorID"},
-				{"foreignField", "_id"},
-				{"as", "transportOperator"},
+			primitive.E{Key: "$lookup", Value: bson.D{
+				primitive.E{Key: "from", Value: "transportOperator"},
+				primitive.E{Key: "localField", Value: "transportOperatorID"},
+				primitive.E{Key: "foreignField", Value: "_id"},
+				primitive.E{Key: "as", Value: "transportOperator"},
 			}},
 		},
 		bson.D{
-			{"$match", filter},
+			primitive.E{Key: "$match", Value: filter},
 		},
 		bson.D{
-			{"$unwind", "$transportOperator"},
+			primitive.E{Key: "$unwind", Value: "$transportOperator"},
 		},
 	}
-	cursor, err := db.Collection("transportOperatorIdentity").Aggregate(context.TODO(), query)
+	cursor, err := toICollection.Aggregate(context.TODO(), query)
 	if err != nil {
 		return nil, err
 	}

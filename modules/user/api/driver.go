@@ -5,9 +5,7 @@ import (
 	"time"
 
 	"github.com/chadhao/logit/config"
-	"github.com/chadhao/logit/modules/user/model"
 	"github.com/chadhao/logit/modules/user/service"
-	"github.com/chadhao/logit/utils"
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -66,42 +64,29 @@ func DriverPinCheck(c echo.Context) error {
 	return c.JSON(http.StatusOK, "ok")
 }
 
+type getDriversByTORequest struct {
+	TransportOperatorID string `json:"transportOperatorID" query:"transportOperatorID"`
+}
+
+// GetDriversByTransportOperator 获取TO组织下的司机信息
 func GetDriversByTransportOperator(c echo.Context) error {
-	r := struct {
-		TransportOperatorID string `json:"transportOperatorID" query:"transportOperatorID"`
-	}{}
-	if err := c.Bind(&r); err != nil {
+	req := new(getDriversByTORequest)
+	if err := c.Bind(req); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
-	transportOperatorID, err := primitive.ObjectIDFromHex(r.TransportOperatorID)
+	toID, err := primitive.ObjectIDFromHex(req.TransportOperatorID)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+	uid, _ := c.Get("user").(primitive.ObjectID)
+
+	resp, err := service.DriversFindByTO(&service.DriversFindByTOInput{
+		OperatorID:          uid,
+		TransportOperatorID: toID,
+	})
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
-	// 若无admin权限, 则验证user是否有改TO权限
-	if !utils.IsOrigin(c, "admin") {
-		uid, _ := c.Get("user").(primitive.ObjectID)
-		if !model.IsIdentity(uid, transportOperatorID, []model.TOIdentity{model.TO_SUPER, model.TO_ADMIN}) {
-			return c.JSON(http.StatusUnauthorized, "user has no authorization")
-		}
-	}
-
-	toFilter := model.TransportOperatorIdentity{
-		TransportOperatorID: transportOperatorID,
-		Identity:            model.TO_DRIVER,
-	}
-	identities, err := toFilter.Filter()
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
-	}
-	driverIDs := []primitive.ObjectID{}
-	for _, v := range identities {
-		driverIDs = append(driverIDs, v.UserID)
-	}
-	drivers, err := model.GetDrivers(driverIDs)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
-	}
-
-	return c.JSON(http.StatusOK, drivers)
+	return c.JSON(http.StatusOK, resp.Drivers)
 }

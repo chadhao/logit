@@ -31,7 +31,7 @@ func (u *User) Create() error {
 
 // Update 更新基础用户信息
 func (u *User) Update() error {
-	filter := bson.D{{"_id", u.ID}}
+	filter := bson.D{primitive.E{Key: "_id", Value: u.ID}}
 	if result, _ := userCollection.ReplaceOne(context.TODO(), filter, u); result.MatchedCount != 1 {
 		return errors.New("User not updated")
 	}
@@ -58,7 +58,7 @@ func IsUserExists(opt UserExistsOpt) bool {
 		conditions = append(conditions, primitive.E{Key: "email", Value: opt.Email})
 	}
 
-	query := bson.D{{"$or", conditions}}
+	query := bson.D{primitive.E{Key: "$or", Value: conditions}}
 
 	count, _ := userCollection.CountDocuments(context.TODO(), query)
 	return count > 0
@@ -76,11 +76,11 @@ func FindUser(opt FindUserOpt) (*User, error) {
 	query := bson.D{}
 	switch {
 	case !opt.UserID.IsZero():
-		query = bson.D{{"_id", opt.UserID}}
+		query = bson.D{primitive.E{Key: "_id", Value: opt.UserID}}
 	case len(opt.Phone) > 0:
-		query = bson.D{{"phone", opt.Phone}}
+		query = bson.D{primitive.E{Key: "phone", Value: opt.Phone}}
 	case len(opt.Email) > 0:
-		query = bson.D{{"email", opt.Email}, {"isEmailVerified", true}}
+		query = bson.D{primitive.E{Key: "email", Value: opt.Email}, primitive.E{Key: "isEmailVerified", Value: true}}
 	default:
 		return nil, errors.New("No query condition found")
 	}
@@ -90,101 +90,29 @@ func FindUser(opt FindUserOpt) (*User, error) {
 	return user, err
 }
 
-// func (u *User) Find() error {
-// 	ctx, cancel := context.WithCancel(context.Background())
-// 	defer cancel()
+// FilterUserOpt 查找用户选项
+type FilterUserOpt struct {
+	Phone string
+	Email string
+}
 
-// 	var filter bson.D
+// FilterUser 按照条件检索user
+func FilterUser(opt FilterUserOpt) ([]*User, error) {
 
-// 	if !u.ID.IsZero() {
-// 		filter = bson.D{{"_id", u.ID}}
-// 	} else if len(u.Phone) > 0 {
-// 		filter = bson.D{{"phone", u.Phone}}
-// 	} else if len(u.Email) > 0 {
-// 		filter = bson.D{{"email", u.Email}, {"isEmailVerified", true}}
-// 	} else {
-// 		return errors.New("No query condition found")
-// 	}
-// 	err := db.Collection("user").FindOne(ctx, filter).Decode(u)
-
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
-
-// func (u *User) PasswordLogin() error {
-// 	pass := u.Password
-
-// 	if err := u.Find(); err != nil {
-// 		return errors.New("user not found")
-// 	}
-
-// 	if u.Password != pass {
-// 		return errors.New("Invalid credentials")
-// 	}
-
-// 	return nil
-// }
-
-// IssueToken 给该用户生成token
-// func (u *User) IssueToken(c conf.Config) (*Token, error) {
-// 	now := time.Now().UTC()
-
-// 	token := &Token{
-// 		AccessTokenExpires:  now.Add(30 * time.Minute),
-// 		RefreshTokenExpires: now.Add(168 * time.Hour),
-// 		UserID:              u.ID,
-// 		RoleIDs:             u.RoleIDs,
-// 	}
-
-// 	accessToken := jwt.New(jwt.SigningMethodHS256)
-// 	accessTokenClaims := accessToken.Claims.(jwt.MapClaims)
-// 	accessTokenClaims["iss"] = "logit.co.nz"
-// 	accessTokenClaims["exp"] = token.AccessTokenExpires.Unix()
-// 	accessTokenClaims["sub"] = u.ID.Hex()
-// 	accessTokenClaims["roles"] = u.RoleIDs
-// 	accessTokenSigningKey, _ := c.Get("system.jwt.access.key")
-// 	if accessTokenSigned, err := accessToken.SignedString([]byte(accessTokenSigningKey)); err != nil {
-// 		return nil, err
-// 	} else {
-// 		token.AccessToken = accessTokenSigned
-// 	}
-
-// 	refreshToken := jwt.New(jwt.SigningMethodHS256)
-// 	refreshTokenClaims := refreshToken.Claims.(jwt.MapClaims)
-// 	refreshTokenClaims["iss"] = "logit.co.nz"
-// 	refreshTokenClaims["exp"] = token.RefreshTokenExpires.Unix()
-// 	refreshTokenClaims["sub"] = u.ID.Hex()
-// 	refreshTokenSigningKey, _ := c.Get("system.jwt.refresh.key")
-// 	if refreshTokenSigned, err := refreshToken.SignedString([]byte(refreshTokenSigningKey)); err != nil {
-// 		return nil, err
-// 	} else {
-// 		token.RefreshToken = refreshTokenSigned
-// 	}
-
-// 	return token, nil
-// }
-
-// Filter 按照条件检索user
-func (u *User) Filter() ([]User, error) {
-
-	users := []User{}
-
+	users := []*User{}
 	filter := bson.M{}
-	if len(u.Phone) > 0 {
-		filter["phone"] = primitive.Regex{Pattern: u.Phone, Options: "i"}
+	if len(opt.Phone) > 0 {
+		filter["phone"] = primitive.Regex{Pattern: opt.Phone, Options: "i"}
 	}
-	if len(u.Email) > 0 {
-		filter["email"] = primitive.Regex{Pattern: u.Email, Options: "i"}
+	if len(opt.Email) > 0 {
+		filter["email"] = primitive.Regex{Pattern: opt.Email, Options: "i"}
 	}
 
 	projection := bson.D{
-		{"password", 0},
-		{"pin", 0},
+		primitive.E{Key: "password", Value: 0},
+		primitive.E{Key: "pin", Value: 0},
 	}
-	cursor, err := db.Collection("user").Find(context.TODO(), filter, options.Find().SetProjection(projection))
+	cursor, err := userCollection.Find(context.TODO(), filter, options.Find().SetProjection(projection))
 	if err != nil {
 		return nil, err
 	}

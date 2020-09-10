@@ -1,78 +1,86 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/chadhao/logit/config"
-	"github.com/chadhao/logit/modules/user/constant"
 	"github.com/chadhao/logit/modules/user/model"
-	"github.com/chadhao/logit/modules/user/request"
+	"github.com/chadhao/logit/modules/user/service"
 	"github.com/chadhao/logit/utils"
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func TransportOperatorRegister(c echo.Context) error {
-	tr := request.TransportOperatorRegRequest{}
-
-	if err := c.Bind(&tr); err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
-	}
-
-	uid, _ := c.Get("user").(primitive.ObjectID)
-	user := &model.User{ID: uid}
-	if err := user.Find(); err != nil {
-		return c.JSON(http.StatusNotFound, err.Error())
-	}
-
-	if _, err := tr.Reg(uid); err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
-	}
-
-	// Issue token update roles
-	roles := utils.RolesAssert(user.RoleIDs)
-	if !roles.Is(constant.ROLE_TO_SUPER) {
-		user.RoleIDs = append(user.RoleIDs, constant.ROLE_TO_SUPER)
-		if err := user.Update(); err != nil {
-			return err
-		}
-	}
-
-	token, err := user.IssueToken(c.Get("config").(config.Config))
-	if err != nil {
-		return err
-	}
-
-	return c.JSON(http.StatusOK, token)
+type transportOperatorRegRequest struct {
+	LicenseNumber string  `json:"licenseNumber"`
+	IsCompany     bool    `json:"isCompany"`
+	Name          string  `json:"name"`
+	Contact       *string `json:"contact,omitempty"`
 }
 
-func TransportOperatorApply(c echo.Context) error {
-	r := struct {
-		TransportOperatorID string `json:"transportOperatorID" query:"transportOperatorID"`
-	}{}
-
-	if err := c.Bind(&r); err != nil {
+// TransportOperatorRegister TO组织注册
+func TransportOperatorRegister(c echo.Context) error {
+	req := new(transportOperatorRegRequest)
+	if err := c.Bind(req); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
-	}
-	toID, err := primitive.ObjectIDFromHex(r.TransportOperatorID)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
-	}
-	to := &model.TransportOperator{
-		ID: toID,
-	}
-	if err := to.Find(); err != nil {
-		return c.JSON(http.StatusNotFound, err.Error())
 	}
 
 	uid, _ := c.Get("user").(primitive.ObjectID)
-	identity, err := to.AddIdentity(uid, model.TO_DRIVER, nil)
+
+	resp, err := service.TransportOperatorRegister(&service.TransportOperatorRegisterInput{
+		Conf:          c.Get("config").(config.Config),
+		UserID:        uid,
+		LicenseNumber: req.LicenseNumber,
+		IsCompany:     req.IsCompany,
+		Name:          req.Name,
+		Contact:       req.Contact,
+	})
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, identity)
+	return c.JSON(http.StatusOK, resp.Token)
+}
+
+// transportOperatorApplyRequest 申请加入TO组织成为司机请求参数
+type transportOperatorApplyRequest struct {
+	TransportOperatorID string `json:"transportOperatorID" query:"transportOperatorID"`
+}
+
+// TransportOperatorApply 申请加入TO组织成为司机
+func TransportOperatorApply(c echo.Context) error {
+
+	req := new(transportOperatorApplyRequest)
+	if err := c.Bind(req); err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	toID, err := primitive.ObjectIDFromHex(req.TransportOperatorID)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	to, err := service.TransportOperatorFind(&service.TransportOperatorFindInput{toID})
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	if !to.IsVerified {
+		return c.JSON(http.StatusBadRequest, "transport operator not verified")
+	}
+
+	uid, _ := c.Get("user").(primitive.ObjectID)
+
+	resp, err := service.TransportOperatorIdentityAdd(&service.TransportOperatorIdentityAddInput{
+		TransportOperatorID: to.ID,
+		UserID:              uid,
+		Identity:            model.TO_DRIVER,
+	})
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, resp.TransportOperatorIdentity)
 }
 
 // GetTransportOperators 获取tos
@@ -82,181 +90,119 @@ func GetTransportOperators(c echo.Context) error {
 		driverOrigin = false
 	}
 
-	to := &model.TransportOperator{}
-	tos, err := to.Filter(driverOrigin)
-
+	resp, err := service.TransportOperatorsFind(&service.TransportOperatorsFindInput{
+		IsVerified: &driverOrigin,
+		IsCompany:  &driverOrigin,
+	})
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
-	return c.JSON(http.StatusOK, tos)
+	return c.JSON(http.StatusOK, resp.Tos)
 }
 
+type transportOperatorUpdateRequest struct {
+	ID            primitive.ObjectID `json:"id"`
+	LicenseNumber string             `json:"licenseNumber"`
+	Name          string             `json:"name"`
+}
+
+// TransportOperatorUpdate TO组织更新
 func TransportOperatorUpdate(c echo.Context) error {
-	tr := request.TransportOperatorUpdateRequest{}
-
-	if err := c.Bind(&tr); err != nil {
+	req := new(transportOperatorUpdateRequest)
+	if err := c.Bind(req); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	uid, _ := c.Get("user").(primitive.ObjectID)
-	ti := model.TransportOperatorIdentity{
+
+	resp, err := service.TransportOperatorUpdate(&service.TransportOperatorUpdateInput{
 		UserID:              uid,
-		TransportOperatorID: tr.ID,
-		Identity:            model.TO_SUPER,
-	}
-	if tos, err := ti.Filter(); len(tos) < 1 || err != nil {
-		return c.JSON(http.StatusUnauthorized, "no authorization")
-	}
-
-	to, err := tr.Update()
+		TransportOperatorID: req.ID,
+		LicenseNumber:       req.LicenseNumber,
+		Name:                req.Name,
+	})
 	if err != nil {
-		return err
-	}
-	return c.JSON(http.StatusOK, to)
-}
-
-// TransportOperatorAddIdentity TO为用户添加TO_SUPER或TO_ADMIN
-func TransportOperatorAddIdentity(c echo.Context) error {
-	tr := request.TransportOperatorAddIdentityRequest{}
-
-	if err := c.Bind(&tr); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
-	uid, _ := c.Get("user").(primitive.ObjectID)
-	if !model.IsIdentity(uid, tr.TransportOperatorID, []model.TOIdentity{model.TO_SUPER}) {
-		return c.JSON(http.StatusUnauthorized, "no authorization")
-	}
-
-	assignedUser := &model.User{ID: tr.UserID}
-	if err := assignedUser.Find(); err != nil {
-		return c.JSON(http.StatusNotFound, err.Error())
-	}
-
-	identity, err := tr.Add()
-	if err != nil {
-		return err
-	}
-
-	// update user role
-	roles := utils.RolesAssert(assignedUser.RoleIDs)
-	if tr.Identity == model.TO_SUPER && !roles.Is(constant.ROLE_TO_SUPER) {
-		assignedUser.RoleIDs = append(assignedUser.RoleIDs, constant.ROLE_TO_SUPER)
-		if err := assignedUser.Update(); err != nil {
-			return err
-		}
-	}
-	if tr.Identity == model.TO_ADMIN && !roles.Is(constant.ROLE_TO_ADMIN) {
-		assignedUser.RoleIDs = append(assignedUser.RoleIDs, constant.ROLE_TO_ADMIN)
-		if err := assignedUser.Update(); err != nil {
-			return err
-		}
-	}
-
-	return c.JSON(http.StatusOK, identity)
+	return c.JSON(http.StatusOK, resp.TransportOperator)
 }
 
+type transportOperatorAssignIdentityRequest struct {
+	TransportOperatorID primitive.ObjectID `json:"transportOperatorID"`
+	UserID              primitive.ObjectID `json:"userID"`
+	Identity            model.TOIdentity   `json:"identity"`
+	Contact             string             `json:"contact"`
+}
+
+// TransportOperatorAssignIdentity TO为用户添加TO_SUPER或TO_ADMIN
+func TransportOperatorAssignIdentity(c echo.Context) error {
+
+	req := new(transportOperatorAssignIdentityRequest)
+	if err := c.Bind(req); err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	uid, _ := c.Get("user").(primitive.ObjectID)
+
+	resp, err := service.TransportOperatorAssignIdentity(&service.TransportOperatorAssignIdentityInput{
+		OperatorID:          uid,
+		UserID:              req.UserID,
+		TransportOperatorID: req.TransportOperatorID,
+		Identity:            req.Identity,
+		Contact:             req.Contact,
+	})
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, resp.Identity)
+}
+
+type transportOperatorRemoveIdentityRequest struct {
+	TransportOperatorIdentityID string `json:"id" query:"id"`
+}
+
+// TransportOperatorRemoveIdentity TO删除角色身份
 func TransportOperatorRemoveIdentity(c echo.Context) error {
-	r := struct {
-		TransportOperatorIdentityID string `json:"id" query:"id"`
-	}{}
-	if err := c.Bind(&r); err != nil {
+
+	req := new(transportOperatorRemoveIdentityRequest)
+	if err := c.Bind(req); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
-	rid, err := primitive.ObjectIDFromHex(r.TransportOperatorIdentityID)
+	toiID, err := primitive.ObjectIDFromHex(req.TransportOperatorIdentityID)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 	uid, _ := c.Get("user").(primitive.ObjectID)
 
-	toi := model.TransportOperatorIdentity{
-		ID: rid,
-	}
-	if err := toi.Find(); err != nil {
-		return c.JSON(http.StatusNotFound, err.Error())
-	}
-
-	if !model.IsIdentity(uid, toi.TransportOperatorID, []model.TOIdentity{model.TO_SUPER}) {
-		return c.JSON(http.StatusUnauthorized, "no authorization")
-	}
-
-	if toi.UserID == uid {
-		return errors.New("cannot delete")
-	}
-
-	if err := toi.Delete(); err != nil {
-		return err
-	}
-
-	// 删除后需要检查角色的role是否需要更新
-	newToi := model.TransportOperatorIdentity{
-		UserID:   toi.UserID,
-		Identity: toi.Identity,
-	}
-	newTois, _ := newToi.Filter()
-	if len(newTois) == 0 {
-		removeUser := &model.User{ID: toi.UserID}
-		if err := removeUser.Find(); err != nil {
-			return c.JSON(http.StatusNotFound, err.Error())
-		}
-		roles := utils.RolesAssert(removeUser.RoleIDs)
-		identity := toi.Identity.GetRole()
-		for i := 0; i < len(roles); i++ {
-			if roles[i] == identity {
-				roles = append(roles[:i], roles[i+1:]...)
-				if err := removeUser.Update(); err != nil {
-					return err
-				}
-				break
-			}
-		}
+	if err := service.TransportOperatorRemoveIdentity(&service.TransportOperatorRemoveIdentityInput{
+		OperatorID:                  uid,
+		TransportOperatorIdentityID: toiID,
+	}); err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, "ok")
 }
 
-func TransportOperatorVerify(c echo.Context) error {
-	r := struct {
-		TransportOperatorID string `json:"transportOperatorID"`
-	}{}
+type transportOperatorVerifyRequest struct {
+	TransportOperatorID string `json:"transportOperatorID"`
+}
 
-	if err := c.Bind(&r); err != nil {
+// TransportOperatorVerify 管理人员审批TO组织
+func TransportOperatorVerify(c echo.Context) error {
+	req := new(transportOperatorVerifyRequest)
+	if err := c.Bind(req); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
-	toID, err := primitive.ObjectIDFromHex(r.TransportOperatorID)
+	toID, err := primitive.ObjectIDFromHex(req.TransportOperatorID)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
-	to := &model.TransportOperator{
-		ID: toID,
-	}
-	if err := to.Find(); err != nil {
-		return c.JSON(http.StatusNotFound, err.Error())
-	}
 
-	to.IsVerified = true
-	if err := to.Update(); err != nil {
-		return err
-	}
-
-	toi := &model.TransportOperatorIdentity{
-		TransportOperatorID: to.ID,
-		Identity:            model.TO_SUPER,
-	}
-	tois, err := toi.Filter()
-	if err != nil || len(tois) != 1 {
-		return err
-	}
-
-	uid := tois[0].UserID
-	assignedUser := &model.User{ID: uid}
-	if err := assignedUser.Find(); err != nil {
-		return c.JSON(http.StatusNotFound, err.Error())
-	}
-	roles := utils.RolesAssert(assignedUser.RoleIDs)
-	if !roles.Is(constant.ROLE_TO_SUPER) {
-		assignedUser.RoleIDs = append(assignedUser.RoleIDs, constant.ROLE_TO_SUPER)
-		if err := assignedUser.Update(); err != nil {
-			return err
-		}
+	if err := service.TransportOperatorVerify(&service.TransportOperatorVerifyInput{
+		TransportOperatorID: toID,
+	}); err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, "ok")

@@ -25,7 +25,7 @@ func (v *Vehicle) Create() error {
 
 // Delete 删除车辆信息
 func (v *Vehicle) Delete() error {
-	filter := bson.D{{"_id", v.ID}}
+	filter := bson.D{primitive.E{Key: "_id", Value: v.ID}}
 	_, err := vehicleCollection.DeleteOne(context.TODO(), filter)
 	return err
 }
@@ -40,10 +40,10 @@ type VehicleExistsOpt struct {
 func IsVehicleExists(opt VehicleExistsOpt) bool {
 
 	conditions := primitive.A{
-		bson.D{{"driverID", opt.DriverID}},
-		bson.D{{"registration", opt.Registration}},
+		bson.D{primitive.E{Key: "driverID", Value: opt.DriverID}},
+		bson.D{primitive.E{Key: "registration", Value: opt.Registration}},
 	}
-	filter := bson.D{{"$and", conditions}}
+	filter := bson.D{primitive.E{Key: "$and", Value: conditions}}
 	count, _ := vehicleCollection.CountDocuments(context.TODO(), filter)
 
 	return count > 0
@@ -52,7 +52,7 @@ func IsVehicleExists(opt VehicleExistsOpt) bool {
 // FindVehicle 通过vehicleID获取vehicle信息
 func FindVehicle(vehicleID primitive.ObjectID) (*Vehicle, error) {
 	vehicle := &Vehicle{}
-	err := vehicleCollection.FindOne(context.TODO(), bson.D{{"_id", vehicleID}}).Decode(vehicle)
+	err := vehicleCollection.FindOne(context.TODO(), bson.D{primitive.E{Key: "_id", Value: vehicleID}}).Decode(vehicle)
 	return vehicle, err
 }
 

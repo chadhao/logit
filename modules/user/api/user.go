@@ -5,12 +5,7 @@ import (
 
 	"github.com/chadhao/logit/config"
 	logInternals "github.com/chadhao/logit/modules/log/internals"
-	"github.com/chadhao/logit/modules/user/constant"
-	"github.com/chadhao/logit/modules/user/model"
-	"github.com/chadhao/logit/modules/user/request"
-	"github.com/chadhao/logit/modules/user/response"
 	"github.com/chadhao/logit/modules/user/service"
-	"github.com/chadhao/logit/utils"
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -82,28 +77,12 @@ func PasswordLogin(c echo.Context) error {
 func UserInfoGet(c echo.Context) error {
 	uid, _ := c.Get("user").(primitive.ObjectID)
 
-	var (
-		user   = &model.User{ID: uid}
-		driver = &model.Driver{}
-	)
-
-	if err := user.Find(); err != nil {
-		return c.JSON(http.StatusNotFound, err.Error())
-	}
-
-	roles := utils.RolesAssert(user.RoleIDs)
-	if roles.Is(constant.ROLE_DRIVER) {
-		driver.ID = uid
-		driver.Find()
-	}
-
-	tFilter := model.TransportOperatorIdentity{
+	resp, err := service.UserInfoFind(&service.UserInfoFindInput{
 		UserID: uid,
+	})
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
-	tois, _ := tFilter.Filter()
-
-	resp := response.UserInfoResponse{}
-	resp.Format(user, driver, tois)
 
 	return c.JSON(http.StatusOK, resp)
 }
@@ -137,18 +116,18 @@ func UserRegister(c echo.Context) error {
 
 	// 当用户注册后为用户发送email验证邮件
 	go func(email string) {
-		vr := request.VerificationRequest{
+		service.SendVerification(&service.SendVerificationInput{
 			Email: email,
-		}
-		vr.Send()
+		})
+
 	}(userResp.Email)
 	return c.JSON(http.StatusOK, tokenResp.Token)
 }
 
 // userUpdateRequest 用户更新请求参数
 type userUpdateRequest struct {
-	Password *string `json:"password,omitempty"`
-	Pin      *string `json:"pin,omitempty"`
+	Password string `json:"password,omitempty"`
+	Pin      string `json:"pin,omitempty"`
 }
 
 // UserUpdate 用户更新
@@ -200,58 +179,15 @@ func ForgetPassword(c echo.Context) error {
 
 // UserQuery 根据条件查询用户
 func UserQuery(c echo.Context) error {
-	ur := struct {
-		Phone string `json:"phone"`
-		Email string `json:"email"`
-	}{}
-
-	if err := c.Bind(&ur); err != nil {
+	req := new(service.UserQueryInput)
+	if err := c.Bind(req); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
-	if len(ur.Phone) > 0 && len(ur.Phone) < 4 {
-		return c.JSON(http.StatusBadRequest, "phone number need to be more specific")
-	}
-	if len(ur.Email) > 0 && len(ur.Email) < 4 {
-		return c.JSON(http.StatusBadRequest, "email need to be more specific")
-	}
-
-	userFilter := model.User{
-		Phone: ur.Phone,
-		Email: ur.Email,
-	}
-
-	users, err := userFilter.Filter()
+	resp, err := service.UserQuery(req)
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
-	uids := []primitive.ObjectID{}
-	for _, v := range users {
-		uids = append(uids, v.ID)
-	}
-	driversMap := make(map[primitive.ObjectID]model.Driver)
-	drivers, _ := model.GetDrivers(uids)
-	for _, driver := range drivers {
-		driversMap[driver.ID] = driver
-	}
-
-	identitiesMap, _ := model.GetIdentitiesByUserIDs(uids)
-
-	type resp struct {
-		model.User
-		Driver     model.Driver                            `json:"driver"`
-		Identities []model.TransportOperatorIdentityDetail `json:"identities"`
-	}
-	resps := []resp{}
-	for _, user := range users {
-		r := resp{
-			User:       user,
-			Driver:     driversMap[user.ID],
-			Identities: identitiesMap[user.ID],
-		}
-		resps = append(resps, r)
-	}
-
-	return c.JSON(http.StatusOK, resps)
+	return c.JSON(http.StatusOK, resp.UserInfo)
 }

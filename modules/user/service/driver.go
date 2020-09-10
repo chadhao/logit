@@ -8,6 +8,7 @@ import (
 	"github.com/chadhao/logit/config"
 	"github.com/chadhao/logit/modules/user/constant"
 	"github.com/chadhao/logit/modules/user/model"
+	"github.com/chadhao/logit/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -96,4 +97,52 @@ func DriverPinCheck(in *DriverPinCheckInput) error {
 		return errors.New("not match")
 	}
 	return nil
+}
+
+type (
+	// DriversFindByTOInput 查询TO下的司机信息参数
+	DriversFindByTOInput struct {
+		OperatorID          primitive.ObjectID
+		TransportOperatorID primitive.ObjectID
+	}
+	// DriversFindByTOOut 查询TO下的司机信息返回参数
+	DriversFindByTOOut struct {
+		Drivers []*model.Driver
+	}
+)
+
+// DriversFindByTO 查询TO下的司机信息
+func DriversFindByTO(in *DriversFindByTOInput) (*DriversFindByTOOut, error) {
+	// 检查操作者是否有TO权限
+	operator, err := model.FindUser(model.FindUserOpt{UserID: in.OperatorID})
+	if err != nil {
+		return nil, err
+	}
+	// 如果operator不是admin以上，则如果不具有该TO的admin以上权限，返回错误
+	if !utils.RolesAssert(operator.RoleIDs).Are([]int{constant.ROLE_ADMIN, constant.ROLE_SUPER}) {
+		if !model.IsTransportOperatorIdentityExists(model.TransportOperatorIdentityExists{
+			UserID:              in.OperatorID,
+			TransportOperatorID: in.TransportOperatorID,
+			Identity:            []model.TOIdentity{model.TO_ADMIN, model.TO_SUPER},
+		}) {
+			return nil, errors.New("operator has no authorization")
+		}
+	}
+
+	// 查询用户
+	tois, err := model.TransportOperatorIdentityFilter(model.TransportOperatorIdentityFilterOpt{
+		TransportOperatorID: in.TransportOperatorID,
+		Identity:            model.TO_DRIVER,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	driverIDs := []primitive.ObjectID{}
+	for _, v := range tois {
+		driverIDs = append(driverIDs, v.UserID)
+	}
+	drivers, err := model.FindDrivers(driverIDs)
+
+	return &DriversFindByTOOut{drivers}, nil
 }

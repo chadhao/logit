@@ -219,7 +219,7 @@ func toGetRecords(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
-	if !userApi.HasAccessTo(uid, did, tid) {
+	if !userApi.CanUserOperatorDriver(uid, did, tid) {
 		return c.JSON(http.StatusUnauthorized, "to has no authorization")
 	}
 

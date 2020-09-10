@@ -117,7 +117,7 @@ func loadRoutes(r router.Router) {
 	r.Add(&router.Route{
 		Path:    "/user/transportoperator/identity",
 		Method:  http.MethodPost,
-		Handler: api.TransportOperatorAddIdentity,
+		Handler: api.TransportOperatorAssignIdentity,
 		Roles:   []int{constant.ROLE_TO_SUPER},
 	})
 	r.Add(&router.Route{

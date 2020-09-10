@@ -235,8 +235,8 @@ type (
 	// GetRecordOut 获取记录及其notes返回
 	GetRecordOut struct {
 		model.Record `json:",inline"`
-		Notes        model.DifNotes    `json:"notes,omitempty"`
-		Vehicle      userModel.Vehicle `json:"vehicle"`
+		Notes        model.DifNotes     `json:"notes,omitempty"`
+		Vehicle      *userModel.Vehicle `json:"vehicle"`
 	}
 )
 
